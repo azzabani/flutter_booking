@@ -22,7 +22,7 @@ class _AddEditResourcePageState extends State<AddEditResourcePage> {
   bool _isLoading = false;
 
   final List<String> _categories = ['salle', 'véhicule', 'ordinateur', 'matériel'];
-
+// update 15 mars 2026
   @override
   void initState() {
     super.initState();
