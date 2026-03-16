@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_booking/models/reservation_model.dart';
 import 'package:flutter_booking/services/auth_service.dart';
+import 'package:flutter_booking/services/reservation_service.dart';
 import 'package:flutter_booking/services/notification_service.dart';
 
 class MyReservationsPage extends StatefulWidget {
@@ -14,55 +16,80 @@ class MyReservationsPage extends StatefulWidget {
 
 class _MyReservationsPageState extends State<MyReservationsPage> {
   final AuthService _authService = AuthService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ReservationService _reservationService = ReservationService();
   final NotificationService _notifService = NotificationService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ✅ Fonction corrigée avec notification
-  Future<void> _cancelReservation(
-      String reservationId, String resourceName, DateTime startTime) async {
+  String _filter = 'all'; // all | pending | confirmed | cancelled
+
+  Future<void> _cancelReservation(ReservationModel reservation,
+      String resourceName) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Annuler la réservation'),
-        content: const Text('Voulez-vous vraiment annuler cette réservation ?'),
+        content: Text(
+            'Voulez-vous vraiment annuler la réservation de "$resourceName" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Non'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Oui', style: TextStyle(color: Colors.red)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Annuler la réservation',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      await _firestore.collection('reservations').doc(reservationId).update({
-        'status': 'cancelled',
-      });
+    if (confirm != true) return;
 
-      final user = _authService.currentUser;
-      if (user != null) {
+    await _firestore
+        .collection('reservations')
+        .doc(reservation.id)
+        .update({
+      'status': 'cancelled',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    final user = _authService.currentUser;
+    if (user != null) {
+      // Notifier l'utilisateur
+      await _notifService.createNotification(
+        userId: user.uid,
+        title: '❌ Réservation annulée',
+        message:
+            '"$resourceName" – ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(reservation.startTime)}',
+        type: 'cancellation',
+        reservationId: reservation.id,
+      );
+
+      // Notifier les admins/managers
+      final admins = await _firestore
+          .collection('users')
+          .where('role', whereIn: ['admin', 'manager']).get();
+      for (final admin in admins.docs) {
+        if (admin.id == user.uid) continue;
         await _notifService.createNotification(
-          userId: user.uid,
-          title: '❌ Réservation annulée',
+          userId: admin.id,
+          title: '🚫 Réservation annulée',
           message:
-              '$resourceName - ${DateFormat('dd/MM/yyyy à HH:mm').format(startTime)}',
+              '${reservation.userName} a annulé "$resourceName" – ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(reservation.startTime)}',
           type: 'cancellation',
-          reservationId: reservationId, // ✅ FIX ICI
+          reservationId: reservation.id,
         );
       }
+    }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Réservation annulée'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Réservation annulée'),
+        backgroundColor: Colors.orange,
+      ));
     }
   }
 
@@ -74,201 +101,406 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mes réservations'),
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: const Color(0xFF2563EB),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('reservations')
-            .where('userId', isEqualTo: user.uid)
-            .orderBy('startTime', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Erreur: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
+        children: [
+          // ── Filtres ─────────────────────────────────────────────────
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  Icon(Icons.calendar_today,
-                      size: 80, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucune réservation',
-                    style: TextStyle(
-                        color: Colors.grey.shade600, fontSize: 16),
-                  ),
+                  _FilterChip(
+                      label: 'Toutes',
+                      value: 'all',
+                      current: _filter,
+                      color: Colors.blue,
+                      onTap: () => setState(() => _filter = 'all')),
+                  const SizedBox(width: 8),
+                  _FilterChip(
+                      label: 'En attente',
+                      value: 'pending',
+                      current: _filter,
+                      color: Colors.orange,
+                      onTap: () => setState(() => _filter = 'pending')),
+                  const SizedBox(width: 8),
+                  _FilterChip(
+                      label: 'Confirmées',
+                      value: 'confirmed',
+                      current: _filter,
+                      color: Colors.green,
+                      onTap: () =>
+                          setState(() => _filter = 'confirmed')),
+                  const SizedBox(width: 8),
+                  _FilterChip(
+                      label: 'Annulées/Rejetées',
+                      value: 'cancelled',
+                      current: _filter,
+                      color: Colors.red,
+                      onTap: () =>
+                          setState(() => _filter = 'cancelled')),
                 ],
               ),
-            );
-          }
+            ),
+          ),
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              final doc = snapshot.data!.docs[index];
-              final data = doc.data() as Map<String, dynamic>;
+          // ── Liste ────────────────────────────────────────────────────
+          Expanded(
+            child: StreamBuilder<List<ReservationModel>>(
+              stream: _reservationService.getUserReservations(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Erreur: ${snapshot.error}'));
+                }
 
-              return FutureBuilder<DocumentSnapshot>(
-                future: _firestore
-                    .collection('resources')
-                    .doc(data['resourceId'])
-                    .get(),
-                builder: (context, resourceSnapshot) {
-                  String resourceName = 'Ressource';
-                  if (resourceSnapshot.hasData &&
-                      resourceSnapshot.data!.exists) {
-                    resourceName =
-                        resourceSnapshot.data!['name'] ?? 'Ressource';
+                var reservations = snapshot.data ?? [];
+
+                // Appliquer le filtre
+                if (_filter != 'all') {
+                  if (_filter == 'cancelled') {
+                    reservations = reservations
+                        .where((r) =>
+                            r.status == 'cancelled' ||
+                            r.status == 'rejected')
+                        .toList();
+                  } else {
+                    reservations = reservations
+                        .where((r) => r.status == _filter)
+                        .toList();
                   }
+                }
 
-                  final startTime =
-                      (data['startTime'] as Timestamp).toDate();
-                  final endTime =
-                      (data['endTime'] as Timestamp).toDate();
-                  final status = data['status'] ?? 'pending';
+                if (reservations.isEmpty) {
+                  return _EmptyState(filter: _filter);
+                }
 
-                  Color statusColor;
-                  String statusText;
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  itemCount: reservations.length,
+                  itemBuilder: (context, i) {
+                    final res = reservations[i];
+                    return _ReservationCard(
+                      reservation: res,
+                      onCancel: (resourceName) =>
+                          _cancelReservation(res, resourceName),
+                      onEdit: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/edit_reservation',
+                          arguments: res,
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                  switch (status) {
-                    case 'confirmed':
-                      statusColor = Colors.green;
-                      statusText = 'Confirmée';
-                      break;
-                    case 'pending':
-                      statusColor = Colors.orange;
-                      statusText = 'En attente';
-                      break;
-                    case 'cancelled':
-                      statusColor = Colors.red;
-                      statusText = 'Annulée';
-                      break;
-                    case 'rejected':
-                      statusColor = Colors.red;
-                      statusText = 'Rejetée';
-                      break;
-                    default:
-                      statusColor = Colors.grey;
-                      statusText = status;
-                  }
+// ── Carte réservation ────────────────────────────────────────────────────────
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
+class _ReservationCard extends StatelessWidget {
+  final ReservationModel reservation;
+  final void Function(String resourceName) onCancel;
+  final VoidCallback onEdit;
+
+  const _ReservationCard({
+    required this.reservation,
+    required this.onCancel,
+    required this.onEdit,
+  });
+
+  Color get _statusColor {
+    switch (reservation.status) {
+      case 'confirmed':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'rejected':
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String get _statusLabel {
+    switch (reservation.status) {
+      case 'confirmed':
+        return '✅ Confirmée';
+      case 'pending':
+        return '⏳ En attente de validation';
+      case 'rejected':
+        return '❌ Rejetée';
+      case 'cancelled':
+        return '🚫 Annulée';
+      default:
+        return reservation.status;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final firestore = FirebaseFirestore.instance;
+
+    return FutureBuilder<DocumentSnapshot>(
+      future:
+          firestore.collection('resources').doc(reservation.resourceId).get(),
+      builder: (context, snap) {
+        final resourceName = snap.hasData && snap.data!.exists
+            ? (snap.data!.data() as Map<String, dynamic>)['name'] ??
+                'Ressource'
+            : reservation.resourceId.isNotEmpty
+                ? 'Ressource'
+                : 'Ressource supprimée';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: Column(
+            children: [
+              // Barre de statut colorée
+              Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _statusColor,
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(14)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Titre + statut
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(resourceName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(_statusLabel,
+                              style: TextStyle(
+                                  color: _statusColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Date & heure
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today,
+                            size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('EEEE d MMMM yyyy', 'fr_FR')
+                              .format(reservation.startTime),
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time,
+                            size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${DateFormat('HH:mm').format(reservation.startTime)} → '
+                          '${DateFormat('HH:mm').format(reservation.endTime)}',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700),
+                        ),
+                      ],
+                    ),
+
+                    // Notes
+                    if (reservation.notes != null &&
+                        reservation.notes!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  resourceName,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color:
-                                      statusColor.withOpacity(0.1),
-                                  borderRadius:
-                                      BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  statusText,
-                                  style: TextStyle(
-                                      color: statusColor,
-                                      fontSize: 12),
-                                ),
-                              ),
-                            ],
+                          Icon(Icons.notes,
+                              size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(reservation.notes!,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600)),
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today,
-                                  size: 14, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Text(
-                                DateFormat('dd/MM/yyyy')
-                                    .format(startTime),
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey),
-                              ),
-                              const SizedBox(width: 12),
-                              const Icon(Icons.access_time,
-                                  size: 14, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${DateFormat('HH:mm').format(startTime)} - ${DateFormat('HH:mm').format(endTime)}',
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          if (data['notes'] != null &&
-                              data['notes']
-                                  .toString()
-                                  .isNotEmpty)
-                            Padding(
-                              padding:
-                                  const EdgeInsets.only(top: 8),
-                              child: Text(
-                                '📝 ${data['notes']}',
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey),
-                              ),
-                            ),
-
-                          // ✅ Bouton avec correction
-                          if (status == 'pending')
-                            Padding(
-                              padding:
-                                  const EdgeInsets.only(top: 12),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton(
-                                  onPressed: () =>
-                                      _cancelReservation(
-                                    doc.id,
-                                    resourceName,
-                                    startTime,
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                        color: Colors.red.shade300),
-                                    foregroundColor: Colors.red,
-                                  ),
-                                  child: const Text(
-                                      'Annuler la réservation'),
-                                ),
-                              ),
-                            ),
                         ],
                       ),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
+                    ],
+
+                    // Validé par
+                    if (reservation.validatedAt != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.verified_user,
+                              size: 14, color: Colors.green.shade400),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Validée le ${DateFormat('dd/MM/yyyy HH:mm').format(reservation.validatedAt!)}',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.green.shade600),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Actions (uniquement si pending)
+                    if (reservation.status == 'pending') ...[
+                      const SizedBox(height: 12),
+                      const Divider(height: 1),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: onEdit,
+                              icon: const Icon(Icons.edit, size: 16),
+                              label: const Text('Modifier'),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                    color: Colors.blue.shade300),
+                                foregroundColor: Colors.blue,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => onCancel(resourceName),
+                              icon: const Icon(Icons.cancel_outlined,
+                                  size: 16),
+                              label: const Text('Annuler'),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                    color: Colors.red.shade300),
+                                foregroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final String current;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.value,
+    required this.current,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = current == value;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? color : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: selected ? color : Colors.grey.shade300),
+        ),
+        child: Text(label,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            )),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String filter;
+  const _EmptyState({required this.filter});
+
+  @override
+  Widget build(BuildContext context) {
+    final messages = {
+      'all': 'Aucune réservation pour l\'instant',
+      'pending': 'Aucune réservation en attente',
+      'confirmed': 'Aucune réservation confirmée',
+      'cancelled': 'Aucune réservation annulée ou rejetée',
+    };
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.event_available,
+              size: 72, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            messages[filter] ?? 'Aucune réservation',
+            style: TextStyle(
+                fontSize: 15, color: Colors.grey.shade500),
+          ),
+        ],
       ),
     );
   }
