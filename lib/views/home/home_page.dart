@@ -640,3 +640,4 @@ class _UpcomingCard extends StatelessWidget {
     );
   }
 }
+// update home UI
