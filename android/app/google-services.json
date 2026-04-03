@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "588250998348",
+    "project_id": "flutter-booking-a640d",
+    "storage_bucket": "flutter-booking-a640d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588250998348:android:f5106ef09bfffbbd7636e9",
+        "android_client_info": {
+          "package_name": "com.example.flutter_booking"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9AB7lY01vKT_F_823Sgj7pbSOltojuD0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
