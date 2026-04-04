@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_booking/views/admin/admin_resource_page.dart';
 import 'package:flutter_booking/views/admin/admin_reservations_page.dart';
+import 'package:flutter_booking/views/admin/admin_validate_page.dart';  // ← Nouvel import
 import 'package:flutter_booking/services/auth_service.dart';
 
 class AdminPage extends StatefulWidget {
@@ -87,9 +88,7 @@ class _AdminPageState extends State<AdminPage> {
             ),
         ],
       ),
-      body: _selectedIndex == 0
-          ? const AdminResourcePage()
-          : const AdminReservationsPage(),
+      body: _getBody(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -106,10 +105,27 @@ class _AdminPageState extends State<AdminPage> {
             icon: Icon(Icons.calendar_today),
             label: 'Réservations',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.verified),
+            label: 'Validations',
+          ),
         ],
         selectedItemColor: Colors.blue.shade700,
         unselectedItemColor: Colors.grey,
       ),
     );
+  }
+
+  Widget _getBody() {
+    switch (_selectedIndex) {
+      case 0:
+        return const AdminResourcePage();
+      case 1:
+        return const AdminReservationsPage();
+      case 2:
+        return const AdminValidatePage();
+      default:
+        return const AdminResourcePage();
+    }
   }
 }
