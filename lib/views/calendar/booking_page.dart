@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_booking/models/resource_model.dart';
 import 'package:flutter_booking/services/auth_service.dart';
+import 'package:flutter_booking/services/notification_service.dart';  // ← Ajout
 
 class BookingPage extends StatefulWidget {
   final ResourceModel resource;
@@ -17,6 +18,7 @@ class BookingPage extends StatefulWidget {
 class _BookingPageState extends State<BookingPage> {
   final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationService _notificationService = NotificationService();  // ← Ajout
   
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
@@ -134,7 +136,7 @@ class _BookingPageState extends State<BookingPage> {
       final userName = userDoc.data()?['name'] ?? user.email?.split('@').first ?? 'Utilisateur';
 
       // Créer la réservation
-      await _firestore.collection('reservations').add({
+      final reservationRef = await _firestore.collection('reservations').add({
         'resourceId': widget.resource.id,
         'userId': user.uid,
         'userName': userName,
@@ -144,6 +146,31 @@ class _BookingPageState extends State<BookingPage> {
         'notes': _notesController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // 🔔 NOTIFICATION pour l'utilisateur
+      await _notificationService.createNotification(
+        userId: user.uid,
+        title: '📅 Réservation créée',
+        message: 'Votre réservation pour "${widget.resource.name}" le ${_formatDate(startDateTime)} a été créée et est en attente de validation.',
+        type: 'reservation',
+        reservationId: reservationRef.id,
+      );
+
+      // 🔔 NOTIFICATION pour les admins
+      final adminUsers = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .get();
+
+      for (var admin in adminUsers.docs) {
+        await _notificationService.createNotification(
+          userId: admin.id,
+          title: '🆕 Nouvelle réservation',
+          message: '$userName a réservé "${widget.resource.name}" pour le ${_formatDate(startDateTime)}',
+          type: 'validation',
+          reservationId: reservationRef.id,
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -165,18 +192,53 @@ class _BookingPageState extends State<BookingPage> {
     }
   }
 
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} à ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Réserver ${widget.resource.name}'),
         backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               child: Column(
                 children: [
+                  // Informations de la ressource
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    color: Colors.blue.shade50,
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.resource.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                              Text(
+                                'Capacité: ${widget.resource.capacity} personnes',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
                   // Calendrier
                   Card(
                     margin: const EdgeInsets.all(12),
@@ -280,6 +342,7 @@ class _BookingPageState extends State<BookingPage> {
                           decoration: const InputDecoration(
                             labelText: 'Notes (optionnel)',
                             border: OutlineInputBorder(),
+                            hintText: 'Ajoutez des informations supplémentaires...',
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -292,6 +355,9 @@ class _BookingPageState extends State<BookingPage> {
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: Colors.green.shade600,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             child: const Text(
                               'Confirmer la réservation',
