@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_booking/models/reservation_model.dart';
+import 'package:flutter_booking/services/reservation_service.dart';
 import 'package:flutter_booking/services/notification_service.dart';
 
 class AdminValidatePage extends StatefulWidget {
@@ -13,52 +15,66 @@ class AdminValidatePage extends StatefulWidget {
 
 class _AdminValidatePageState extends State<AdminValidatePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ReservationService _reservationService = ReservationService();
   final NotificationService _notificationService = NotificationService();
+
   String _selectedTab = 'pending';
   bool _isProcessing = false;
 
-  Future<void> _updateStatus(String id, String status) async {
+  // ─── Mise à jour du statut ─────────────────────────────────────────────────
+
+  Future<void> _updateStatus(Reservation reservation, String status) async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
     try {
-      // Récupérer les informations de la réservation
-      final reservationDoc = await _firestore.collection('reservations').doc(id).get();
-      final reservationData = reservationDoc.data()!;
-      final userId = reservationData['userId'];
-      final resourceId = reservationData['resourceId'];
-      final userName = reservationData['userName'] ?? 'Utilisateur';
-      
-      // Récupérer le nom de la ressource
-      final resourceDoc = await _firestore.collection('resources').doc(resourceId).get();
-      final resourceName = resourceDoc.data()?['name'] ?? 'Ressource';
-      
-      // Récupérer la date de réservation
-      final startTime = (reservationData['startTime'] as Timestamp).toDate();
-      final formattedDate = DateFormat('dd/MM/yyyy à HH:mm').format(startTime);
-      
-      // Mettre à jour le statut
-      await _firestore.collection('reservations').doc(id).update({
+      // FIX BUG 4 : on utilise reservation.resourceId déjà validé (non vide)
+      final resourceId = reservation.resourceId;
+
+      // Nom de la ressource
+      String resourceName = 'Ressource';
+      if (resourceId.isNotEmpty) {
+        final resourceDoc =
+            await _firestore.collection('resources').doc(resourceId).get();
+        if (resourceDoc.exists) {
+          resourceName =
+              (resourceDoc.data() as Map<String, dynamic>)['name'] ?? 'Ressource';
+        }
+      }
+
+      final formattedDate =
+          DateFormat('dd/MM/yyyy à HH:mm').format(reservation.startTime);
+
+      // Mise à jour Firestore
+      await _firestore
+          .collection('reservations')
+          .doc(reservation.id)
+          .update({
         'status': status,
         'validatedAt': FieldValue.serverTimestamp(),
       });
-      
-      // 🔔 Notification pour l'utilisateur
+
+      // Notification in-app
       await _notificationService.createNotification(
-        userId: userId,
-        title: status == 'confirmed' ? '✅ Réservation confirmée' : '❌ Réservation rejetée',
+        userId: reservation.userId,
+        title: status == 'confirmed'
+            ? '✅ Réservation confirmée'
+            : '❌ Réservation rejetée',
         message: status == 'confirmed'
             ? 'Votre réservation pour "$resourceName" le $formattedDate a été confirmée.'
             : 'Votre réservation pour "$resourceName" le $formattedDate a été rejetée.',
         type: status == 'confirmed' ? 'confirmation' : 'rejection',
-        reservationId: id,
+        reservationId: reservation.id,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(status == 'confirmed' ? '✅ Réservation confirmée' : '❌ Réservation rejetée'),
-            backgroundColor: status == 'confirmed' ? Colors.green : Colors.red,
+            content: Text(status == 'confirmed'
+                ? '✅ Réservation confirmée'
+                : '❌ Réservation rejetée'),
+            backgroundColor:
+                status == 'confirmed' ? Colors.green : Colors.red,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -67,7 +83,7 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur: $e'),
+            content: Text('Erreur : $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -76,6 +92,8 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
       if (mounted) setState(() => _isProcessing = false);
     }
   }
+
+  // ─── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -87,112 +105,27 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
       ),
       body: Column(
         children: [
-          // Onglets
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildTab('En attente', 'pending', Colors.orange),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildTab('Confirmées', 'confirmed', Colors.green),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildTab('Toutes', 'all', Colors.blue),
-                ),
-              ],
-            ),
-          ),
-          
-          // Liste
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore.collection('reservations').snapshots(),  // ← Pas de where, pas de orderBy
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error, size: 60, color: Colors.red.shade300),
-                        const SizedBox(height: 16),
-                        Text('Erreur: ${snapshot.error}'),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => setState(() {}),
-                          child: const Text('Réessayer'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                
-                // Filtrage manuel selon l'onglet sélectionné
-                var docs = snapshot.data!.docs;
-                
-                if (_selectedTab == 'pending') {
-                  docs = docs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return data['status'] == 'pending';
-                  }).toList();
-                } else if (_selectedTab == 'confirmed') {
-                  docs = docs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return data['status'] == 'confirmed';
-                  }).toList();
-                }
-                
-                // Tri manuel par date décroissante
-                docs.sort((a, b) {
-                  final aData = a.data() as Map<String, dynamic>;
-                  final bData = b.data() as Map<String, dynamic>;
-                  final aDate = (aData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-                  final bDate = (bData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-                  return bDate.compareTo(aDate);
-                });
-                
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inbox, size: 80, color: Colors.grey.shade400),
-                        const SizedBox(height: 16),
-                        Text(
-                          _selectedTab == 'pending' 
-                              ? 'Aucune réservation en attente'
-                              : _selectedTab == 'confirmed'
-                                  ? 'Aucune réservation confirmée'
-                                  : 'Aucune réservation',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+          _buildTabBar(),
+          Expanded(child: _buildList()),
+        ],
+      ),
+    );
+  }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final doc = docs[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    return _buildCard(doc.id, data);
-                  },
-                );
-              },
-            ),
-          ),
+  // ─── Onglets ───────────────────────────────────────────────────────────────
+
+  Widget _buildTabBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        children: [
+          Expanded(
+              child: _buildTab('En attente', 'pending', Colors.orange)),
+          const SizedBox(width: 8),
+          Expanded(
+              child: _buildTab('Confirmées', 'confirmed', Colors.green)),
+          const SizedBox(width: 8),
+          Expanded(child: _buildTab('Toutes', 'all', Colors.blue)),
         ],
       ),
     );
@@ -203,11 +136,7 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
     return FilterChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _selectedTab = value;
-        });
-      },
+      onSelected: (_) => setState(() => _selectedTab = value),
       backgroundColor: Colors.grey.shade200,
       selectedColor: color.withOpacity(0.2),
       checkmarkColor: color,
@@ -218,32 +147,120 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
     );
   }
 
-  Widget _buildCard(String id, Map<String, dynamic> data) {
-    final startTime = (data['startTime'] as Timestamp).toDate();
-    final endTime = (data['endTime'] as Timestamp).toDate();
-    final status = data['status'] ?? 'pending';
-    
+  // ─── Liste ─────────────────────────────────────────────────────────────────
+  //
+  // FIX BUG 1 & 2 : on utilise getAllReservations() du service qui fait
+  // le filtrage + tri côté client → aucun index composite requis.
+
+  Widget _buildList() {
+    final statusFilter =
+        _selectedTab == 'all' ? null : _selectedTab;
+
+    return StreamBuilder<List<Reservation>>(
+      stream: _reservationService.getAllReservations(statusFilter: statusFilter),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildError(snapshot.error.toString());
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final reservations = snapshot.data ?? [];
+
+        if (reservations.isEmpty) {
+          return _buildEmpty();
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: reservations.length,
+          itemBuilder: (context, index) =>
+              _buildCard(reservations[index]),
+        );
+      },
+    );
+  }
+
+  // ─── États vides / erreur ──────────────────────────────────────────────────
+
+  Widget _buildEmpty() {
+    final messages = {
+      'pending': 'Aucune réservation en attente',
+      'confirmed': 'Aucune réservation confirmée',
+      'all': 'Aucune réservation',
+    };
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_outlined, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            messages[_selectedTab] ?? 'Aucune réservation',
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'Une erreur est survenue',
+              style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red.shade700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Carte réservation ─────────────────────────────────────────────────────
+
+  Widget _buildCard(Reservation reservation) {
+    final status = reservation.status;
+    final statusColor = _statusColor(status);
+    final statusEmoji = _statusEmoji(status);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // En-tête avec utilisateur
+            // En-tête
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: status == 'pending' ? Colors.orange : Colors.green,
-                  radius: 16,
-                  child: Text(
-                    status == 'pending' ? '⏳' : '✅',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  backgroundColor: statusColor.withOpacity(0.15),
+                  radius: 18,
+                  child: Text(statusEmoji, style: const TextStyle(fontSize: 14)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -251,80 +268,95 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        data['userName'] ?? 'Utilisateur',
+                        reservation.userName,
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
-                      const SizedBox(height: 4),
-                      FutureBuilder<DocumentSnapshot>(
-                        future: _firestore
-                            .collection('resources')
-                            .doc(data['resourceId'])
-                            .get(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData && snapshot.data!.exists) {
-                            final resourceData = snapshot.data!.data() as Map<String, dynamic>;
-                            return Text(
-                              resourceData['name'] ?? 'Ressource',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            );
-                          }
-                          return const SizedBox();
-                        },
-                      ),
+                      const SizedBox(height: 2),
+                      // Nom de la ressource via FutureBuilder sécurisé
+                      _buildResourceName(reservation.resourceId),
                     ],
+                  ),
+                ),
+                // Badge statut
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: statusColor.withOpacity(0.4)),
+                  ),
+                  child: Text(
+                    _statusLabel(status),
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor),
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
-            // Date et heure
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+
+            // Date & heure
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade500),
+                Icon(Icons.calendar_today_outlined,
+                    size: 14, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
                 Text(
-                  DateFormat('dd/MM/yyyy').format(startTime),
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  DateFormat('dd/MM/yyyy').format(reservation.startTime),
+                  style:
+                      TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
-                const SizedBox(width: 12),
-                Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
+                const SizedBox(width: 16),
+                Icon(Icons.access_time_outlined,
+                    size: 14, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
                 Text(
-                  '${DateFormat('HH:mm').format(startTime)} - ${DateFormat('HH:mm').format(endTime)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  '${DateFormat('HH:mm').format(reservation.startTime)} - '
+                  '${DateFormat('HH:mm').format(reservation.endTime)}',
+                  style:
+                      TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
               ],
             ),
-            
+
             // Notes
-            if (data['notes'] != null && data['notes'].toString().isNotEmpty)
+            if (reservation.notes != null &&
+                reservation.notes!.trim().isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  '📝 ${data['notes']}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                child: Row(
+                  children: [
+                    Icon(Icons.notes_outlined,
+                        size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        reservation.notes!,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            
-            // Date de création
-            if (data['createdAt'] != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Créée le ${DateFormat('dd/MM/yyyy HH:mm').format((data['createdAt'] as Timestamp).toDate())}',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                ),
+
+            // Date création
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Créée le ${DateFormat('dd/MM/yyyy HH:mm').format(reservation.createdAt)}',
+                style:
+                    TextStyle(fontSize: 10, color: Colors.grey.shade400),
               ),
-            
-            // Boutons d'action
+            ),
+
+            // Boutons confirmer / rejeter (uniquement si pending)
             if (status == 'pending')
               Padding(
                 padding: const EdgeInsets.only(top: 12),
@@ -332,32 +364,36 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _isProcessing ? null : () => _updateStatus(id, 'confirmed'),
+                        onPressed: _isProcessing
+                            ? null
+                            : () => _updateStatus(reservation, 'confirmed'),
                         icon: const Icon(Icons.check, size: 16),
                         label: const Text('Confirmer'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _isProcessing ? null : () => _updateStatus(id, 'rejected'),
+                        onPressed: _isProcessing
+                            ? null
+                            : () => _updateStatus(reservation, 'rejected'),
                         icon: const Icon(Icons.close, size: 16),
                         label: const Text('Rejeter'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
                     ),
@@ -368,5 +404,79 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
         ),
       ),
     );
+  }
+
+  // ─── Nom de la ressource (sécurisé) ───────────────────────────────────────
+  //
+  // FIX BUG 4 : on vérifie que resourceId est non-vide avant d'appeler
+  // Firestore, sinon "document path must be a non-empty string".
+
+  Widget _buildResourceName(String resourceId) {
+    if (resourceId.isEmpty) {
+      return Text('Ressource inconnue',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500));
+    }
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: _firestore.collection('resources').doc(resourceId).get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Text('Chargement…',
+              style:
+                  TextStyle(fontSize: 12, color: Colors.grey.shade400));
+        }
+        if (!snapshot.data!.exists) {
+          return Text('Ressource supprimée',
+              style:
+                  TextStyle(fontSize: 12, color: Colors.orange.shade400));
+        }
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        return Text(
+          data['name'] ?? 'Ressource',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        );
+      },
+    );
+  }
+
+  // ─── Helpers statut ───────────────────────────────────────────────────────
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'confirmed':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'cancelled':
+        return Colors.grey;
+      default:
+        return Colors.orange;
+    }
+  }
+
+  String _statusEmoji(String status) {
+    switch (status) {
+      case 'confirmed':
+        return '✅';
+      case 'rejected':
+        return '❌';
+      case 'cancelled':
+        return '🚫';
+      default:
+        return '⏳';
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'confirmed':
+        return 'Confirmée';
+      case 'rejected':
+        return 'Rejetée';
+      case 'cancelled':
+        return 'Annulée';
+      default:
+        return 'En attente';
+    }
   }
 }
