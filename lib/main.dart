@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_booking/firebase_options.dart';
 import 'package:flutter_booking/services/auth_service.dart';
+import 'package:flutter_booking/services/preferences_service.dart';
 import 'views/auth/login_page.dart';
 import 'views/auth/signup_page.dart';
 import 'views/home/home_page.dart';
@@ -28,11 +29,35 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FlutterBooking',
+      title: 'Booky',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
+        fontFamily: 'Poppins',
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          centerTitle: true,
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.blue, width: 2),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
       ),
       initialRoute: '/',
       onGenerateRoute: (settings) {
@@ -69,26 +94,53 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  final AuthService _authService = AuthService();
+  bool _isCheckingAutoLogin = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAutoLogin();
+  }
+
+  Future<void> _checkAutoLogin() async {
+    final rememberMe = await PreferencesService.getRememberMe();
+    if (rememberMe) {
+      final savedEmail = await PreferencesService.getSavedEmail();
+      // L'email est sauvegardé, mais l'utilisateur devra entrer son mot de passe
+    }
+    setState(() {
+      _isCheckingAutoLogin = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: AuthService().user,
+      stream: _authService.user,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.active) {
-          final user = snapshot.data;
-          if (user != null) {
-            return const HomePage();
-          }
-          return const LoginPage();
+        if (snapshot.connectionState == ConnectionState.waiting || _isCheckingAutoLogin) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
         }
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
+        
+        final user = snapshot.data;
+        if (user != null) {
+          return const HomePage();
+        }
+        
+        return const LoginPage();
       },
     );
   }
