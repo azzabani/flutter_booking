@@ -76,7 +76,7 @@ class _LoginPageState extends State<LoginPage> {
             colors: [
               Colors.blue.shade50,
               Colors.white,
-              Colors.blue.shade50,
+              Colors.blue.shade100,
             ],
           ),
         ),
@@ -87,36 +87,56 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo/Icon
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.shade200,
-                          blurRadius: 20,
-                          spreadRadius: 5,
+                  // Logo/Icon avec animation
+                  TweenAnimationBuilder(
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 800),
+                    builder: (context, double value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blue.shade400,
+                            Colors.blue.shade700,
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.event_seat,
-                      size: 60,
-                      color: Colors.blue.shade700,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.shade300,
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.event_seat,
+                        size: 60,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
                   
-                  // Titre
+                  // Titre principal
                   Text(
-                    'FlutterBooking',
+                    'Booky',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 42,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade800,
-                      letterSpacing: 1.2,
+                      foreground: Paint()
+                        ..shader = LinearGradient(
+                          colors: [
+                            Colors.blue.shade700,
+                            Colors.blue.shade400,
+                          ],
+                        ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -125,6 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey.shade600,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -145,6 +166,7 @@ class _LoginPageState extends State<LoginPage> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
                                 labelText: 'Email',
                                 hintText: 'exemple@email.com',
@@ -162,6 +184,8 @@ class _LoginPageState extends State<LoginPage> {
                                     width: 2,
                                   ),
                                 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -179,6 +203,8 @@ class _LoginPageState extends State<LoginPage> {
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _login(),
                               decoration: InputDecoration(
                                 labelText: 'Mot de passe',
                                 prefixIcon: Icon(
@@ -208,6 +234,8 @@ class _LoginPageState extends State<LoginPage> {
                                     width: 2,
                                   ),
                                 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -220,6 +248,29 @@ class _LoginPageState extends State<LoginPage> {
                               },
                             ),
                             const SizedBox(height: 20),
+                            
+                            // Mot de passe oublié
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  // TODO: Implémenter réinitialisation mot de passe
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Fonctionnalité à venir'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Mot de passe oublié ?',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
                             
                             // Bouton Connexion
                             SizedBox(
@@ -300,5 +351,12 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

@@ -22,6 +22,7 @@ class _SignupPageState extends State<SignupPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _selectedRole = 'utilisateur';
+  bool _acceptedTerms = false;
 
   final AuthService _authService = AuthService();
 
@@ -29,17 +30,24 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez accepter les conditions d\'utilisation'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      // Créer l'utilisateur
       UserCredential userCredential = await _authService.signUp(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      // Enregistrer les informations supplémentaires dans Firestore
       await _authService.saveUserData(
         userId: userCredential.user!.uid,
         name: _nameController.text.trim(),
@@ -50,7 +58,7 @@ class _SignupPageState extends State<SignupPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Inscription réussie !'),
+            content: Text('Inscription réussie ! Bienvenue 🎉'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -114,29 +122,39 @@ class _SignupPageState extends State<SignupPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Icon
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.green.shade400,
-                          Colors.blue.shade400,
+                  // Icon avec animation
+                  TweenAnimationBuilder(
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 800),
+                    builder: (context, double value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.green.shade400,
+                            Colors.blue.shade400,
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.shade200,
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
                         ],
                       ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.shade200,
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.person_add,
-                      size: 50,
-                      color: Colors.white,
+                      child: const Icon(
+                        Icons.person_add,
+                        size: 50,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -145,14 +163,14 @@ class _SignupPageState extends State<SignupPage> {
                   Text(
                     'Créer un compte',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue.shade800,
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Inscrivez-vous pour commencer',
+                    'Rejoignez Booky dès aujourd\'hui',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade600,
@@ -175,6 +193,7 @@ class _SignupPageState extends State<SignupPage> {
                             // Nom complet
                             TextFormField(
                               controller: _nameController,
+                              textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
                                 labelText: 'Nom complet',
                                 hintText: 'Jean Dupont',
@@ -192,10 +211,15 @@ class _SignupPageState extends State<SignupPage> {
                                     width: 2,
                                   ),
                                 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Veuillez entrer votre nom';
+                                }
+                                if (value.length < 2) {
+                                  return 'Nom trop court';
                                 }
                                 return null;
                               },
@@ -206,6 +230,7 @@ class _SignupPageState extends State<SignupPage> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
                                 labelText: 'Email',
                                 hintText: 'exemple@email.com',
@@ -223,12 +248,15 @@ class _SignupPageState extends State<SignupPage> {
                                     width: 2,
                                   ),
                                 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Veuillez entrer votre email';
                                 }
-                                if (!value.contains('@') || !value.contains('.')) {
+                                final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                                if (!emailRegex.hasMatch(value)) {
                                   return 'Email invalide';
                                 }
                                 return null;
@@ -248,6 +276,8 @@ class _SignupPageState extends State<SignupPage> {
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
                               items: _roles.map((role) {
                                 return DropdownMenuItem(
@@ -272,6 +302,7 @@ class _SignupPageState extends State<SignupPage> {
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
                                 labelText: 'Mot de passe',
                                 prefixIcon: Icon(
@@ -301,6 +332,8 @@ class _SignupPageState extends State<SignupPage> {
                                     width: 2,
                                   ),
                                 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -318,6 +351,8 @@ class _SignupPageState extends State<SignupPage> {
                             TextFormField(
                               controller: _confirmPasswordController,
                               obscureText: _obscureConfirmPassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _signup(),
                               decoration: InputDecoration(
                                 labelText: 'Confirmer le mot de passe',
                                 prefixIcon: Icon(
@@ -348,6 +383,8 @@ class _SignupPageState extends State<SignupPage> {
                                     width: 2,
                                   ),
                                 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -359,7 +396,48 @@ class _SignupPageState extends State<SignupPage> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 30),
+                            const SizedBox(height: 20),
+                            
+                            // Conditions d'utilisation
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: _acceptedTerms,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _acceptedTerms = value ?? false;
+                                    });
+                                  },
+                                  activeColor: Colors.green.shade600,
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _acceptedTerms = !_acceptedTerms;
+                                      });
+                                    },
+                                    child: Text.rich(
+                                      TextSpan(
+                                        text: 'J\'accepte les ',
+                                        style: TextStyle(color: Colors.grey.shade600),
+                                        children: [
+                                          TextSpan(
+                                            text: 'conditions d\'utilisation',
+                                            style: TextStyle(
+                                              color: Colors.blue.shade700,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 20),
                             
                             // Bouton inscription
                             SizedBox(
