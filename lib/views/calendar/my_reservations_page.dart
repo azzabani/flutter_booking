@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_booking/services/auth_service.dart';
+import 'package:flutter_booking/services/notification_service.dart';
 
 class MyReservationsPage extends StatefulWidget {
   const MyReservationsPage({super.key});
@@ -14,8 +15,11 @@ class MyReservationsPage extends StatefulWidget {
 class _MyReservationsPageState extends State<MyReservationsPage> {
   final AuthService _authService = AuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationService _notifService = NotificationService();
 
-  Future<void> _cancelReservation(String reservationId) async {
+  // ✅ Fonction corrigée avec notification
+  Future<void> _cancelReservation(
+      String reservationId, String resourceName, DateTime startTime) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -38,9 +42,25 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
       await _firestore.collection('reservations').doc(reservationId).update({
         'status': 'cancelled',
       });
+
+      final user = _authService.currentUser;
+      if (user != null) {
+        await _notifService.createNotification(
+          userId: user.uid,
+          title: '❌ Réservation annulée',
+          message:
+              '$resourceName - ${DateFormat('dd/MM/yyyy à HH:mm').format(startTime)}',
+          type: 'cancellation',
+          reservationId: reservationId, // ✅ FIX ICI
+        );
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Réservation annulée'), backgroundColor: Colors.orange),
+          const SnackBar(
+            content: Text('Réservation annulée'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
     }
@@ -74,11 +94,13 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.calendar_today, size: 80, color: Colors.grey.shade400),
+                  Icon(Icons.calendar_today,
+                      size: 80, color: Colors.grey.shade400),
                   const SizedBox(height: 16),
                   Text(
                     'Aucune réservation',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 16),
                   ),
                 ],
               ),
@@ -91,21 +113,29 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
             itemBuilder: (context, index) {
               final doc = snapshot.data!.docs[index];
               final data = doc.data() as Map<String, dynamic>;
-              
+
               return FutureBuilder<DocumentSnapshot>(
-                future: _firestore.collection('resources').doc(data['resourceId']).get(),
+                future: _firestore
+                    .collection('resources')
+                    .doc(data['resourceId'])
+                    .get(),
                 builder: (context, resourceSnapshot) {
                   String resourceName = 'Ressource';
-                  if (resourceSnapshot.hasData && resourceSnapshot.data!.exists) {
-                    resourceName = resourceSnapshot.data!['name'] ?? 'Ressource';
+                  if (resourceSnapshot.hasData &&
+                      resourceSnapshot.data!.exists) {
+                    resourceName =
+                        resourceSnapshot.data!['name'] ?? 'Ressource';
                   }
-                  
-                  final startTime = (data['startTime'] as Timestamp).toDate();
-                  final endTime = (data['endTime'] as Timestamp).toDate();
+
+                  final startTime =
+                      (data['startTime'] as Timestamp).toDate();
+                  final endTime =
+                      (data['endTime'] as Timestamp).toDate();
                   final status = data['status'] ?? 'pending';
-                  
+
                   Color statusColor;
                   String statusText;
+
                   switch (status) {
                     case 'confirmed':
                       statusColor = Colors.green;
@@ -136,7 +166,8 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
                                 child: Text(
@@ -148,14 +179,19 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color:
+                                      statusColor.withOpacity(0.1),
+                                  borderRadius:
+                                      BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   statusText,
-                                  style: TextStyle(color: statusColor, fontSize: 12),
+                                  style: TextStyle(
+                                      color: statusColor,
+                                      fontSize: 12),
                                 ),
                               ),
                             ],
@@ -163,41 +199,64 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                              const Icon(Icons.calendar_today,
+                                  size: 14, color: Colors.grey),
                               const SizedBox(width: 4),
                               Text(
-                                DateFormat('dd/MM/yyyy').format(startTime),
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                DateFormat('dd/MM/yyyy')
+                                    .format(startTime),
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey),
                               ),
                               const SizedBox(width: 12),
-                              const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                              const Icon(Icons.access_time,
+                                  size: 14, color: Colors.grey),
                               const SizedBox(width: 4),
                               Text(
                                 '${DateFormat('HH:mm').format(startTime)} - ${DateFormat('HH:mm').format(endTime)}',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey),
                               ),
                             ],
                           ),
-                          if (data['notes'] != null && data['notes'].toString().isNotEmpty)
+                          if (data['notes'] != null &&
+                              data['notes']
+                                  .toString()
+                                  .isNotEmpty)
                             Padding(
-                              padding: const EdgeInsets.only(top: 8),
+                              padding:
+                                  const EdgeInsets.only(top: 8),
                               child: Text(
                                 '📝 ${data['notes']}',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey),
                               ),
                             ),
+
+                          // ✅ Bouton avec correction
                           if (status == 'pending')
                             Padding(
-                              padding: const EdgeInsets.only(top: 12),
+                              padding:
+                                  const EdgeInsets.only(top: 12),
                               child: SizedBox(
                                 width: double.infinity,
                                 child: OutlinedButton(
-                                  onPressed: () => _cancelReservation(doc.id),
+                                  onPressed: () =>
+                                      _cancelReservation(
+                                    doc.id,
+                                    resourceName,
+                                    startTime,
+                                  ),
                                   style: OutlinedButton.styleFrom(
-                                    side: BorderSide(color: Colors.red.shade300),
+                                    side: BorderSide(
+                                        color: Colors.red.shade300),
                                     foregroundColor: Colors.red,
                                   ),
-                                  child: const Text('Annuler la réservation'),
+                                  child: const Text(
+                                      'Annuler la réservation'),
                                 ),
                               ),
                             ),

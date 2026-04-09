@@ -26,7 +26,7 @@ class NotificationsPage extends StatelessWidget {
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
         actions: [
-          // Tout marquer comme lu
+          // ✅ Tout marquer comme lu
           TextButton.icon(
             onPressed: () async {
               final snap = await FirebaseFirestore.instance
@@ -34,6 +34,7 @@ class NotificationsPage extends StatelessWidget {
                   .where('userId', isEqualTo: user.uid)
                   .where('isRead', isEqualTo: false)
                   .get();
+
               for (final doc in snap.docs) {
                 await notifService.markAsRead(doc.id);
               }
@@ -79,16 +80,30 @@ class NotificationsPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final doc = docs[index];
               final data = doc.data() as Map<String, dynamic>;
-              final isRead = data['isRead'] as bool? ?? false;
-              final type = data['type'] as String? ?? 'reservation';
-              final title = data['title'] as String? ?? '';
-              final message = data['message'] as String? ?? '';
+
+              final isRead = data['isRead'] ?? false;
+              final type = data['type'] ?? 'reservation';
+              final title = data['title'] ?? '';
+              final message = data['message'] ?? '';
+              final reservationId = data['reservationId']; // ✅ récupéré
+
               final createdAt = data['createdAt'] != null
                   ? (data['createdAt'] as Timestamp).toDate()
                   : DateTime.now();
 
               return InkWell(
-                onTap: () => notifService.markAsRead(doc.id),
+                onTap: () async {
+                  await notifService.markAsRead(doc.id);
+
+                  // ✅ Navigation (optionnel)
+                  if (reservationId != null) {
+                    Navigator.pushNamed(
+                      context,
+                      '/reservation_details',
+                      arguments: reservationId,
+                    );
+                  }
+                },
                 child: Container(
                   color: isRead ? null : Colors.blue.shade50,
                   padding: const EdgeInsets.symmetric(
@@ -96,7 +111,7 @@ class NotificationsPage extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Icône selon le type
+                      // Icône
                       Container(
                         width: 44,
                         height: 44,
@@ -110,7 +125,9 @@ class NotificationsPage extends StatelessWidget {
                           size: 22,
                         ),
                       ),
+
                       const SizedBox(width: 12),
+
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,7 +156,9 @@ class NotificationsPage extends StatelessWidget {
                                   ),
                               ],
                             ),
+
                             const SizedBox(height: 4),
+
                             Text(
                               message,
                               style: TextStyle(
@@ -147,13 +166,33 @@ class NotificationsPage extends StatelessWidget {
                                 color: Colors.grey.shade600,
                               ),
                             ),
+
                             const SizedBox(height: 6),
-                            Text(
-                              _formatDate(createdAt),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade400,
-                              ),
+
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _formatDate(createdAt),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+
+                                // ✅ Supprimer notification
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline,
+                                      size: 18),
+                                  onPressed: () async {
+                                    await FirebaseFirestore.instance
+                                        .collection('notifications')
+                                        .doc(doc.id)
+                                        .delete();
+                                  },
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -169,34 +208,43 @@ class NotificationsPage extends StatelessWidget {
     );
   }
 
+  // 🎨 Couleurs
   Color _typeColor(String type) {
     switch (type) {
       case 'validation':
         return Colors.green;
       case 'cancellation':
         return Colors.red;
+      case 'modification':
+        return Colors.orange; // ✅ ajouté
       default:
         return Colors.blue;
     }
   }
 
+  // 🔔 Icônes
   IconData _typeIcon(String type) {
     switch (type) {
       case 'validation':
         return Icons.check_circle_outline;
       case 'cancellation':
         return Icons.cancel_outlined;
+      case 'modification':
+        return Icons.edit_calendar; // ✅ ajouté
       default:
         return Icons.event_note;
     }
   }
 
+  // ⏱️ Format date
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
+
     if (diff.inMinutes < 1) return 'À l\'instant';
     if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
     if (diff.inHours < 24) return 'Il y a ${diff.inHours}h';
+
     return DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(date);
   }
 }

@@ -14,28 +14,19 @@ import 'package:flutter_booking/providers/calendar_provider.dart';
 
 import 'views/auth/login_page.dart';
 import 'views/auth/signup_page.dart';
-import 'views/home/home_page.dart';
+import 'views/home/main_shell.dart';
 import 'views/resources/resources_page.dart';
 import 'views/resources/resource_detail_page.dart';
 import 'views/calendar/booking_page.dart';
-import 'views/calendar/calendar_page.dart';
-import 'views/calendar/my_reservations_page.dart';
+import 'views/calendar/edit_reservation_page.dart';
 import 'views/admin/admin_page.dart';
 import 'models/resource_model.dart';
-import 'views/profile/profile_page.dart';
-import 'views/notifications/notifications_page.dart';
+import 'models/reservation_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialisation Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // Initialisation des formats de date en français
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeDateFormatting('fr_FR', null);
-
   runApp(const MyApp());
 }
 
@@ -44,7 +35,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── MultiProvider : injecte tous les providers dans l'arbre ──────────────
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserAuthProvider()),
@@ -55,27 +45,30 @@ class MyApp extends StatelessWidget {
         title: 'Booky',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2563EB),
+            brightness: Brightness.light,
+          ),
           useMaterial3: true,
           fontFamily: 'Poppins',
           appBarTheme: const AppBarTheme(
             elevation: 0,
             centerTitle: true,
-            backgroundColor: Colors.blue,
+            backgroundColor: Color(0xFF2563EB),
             foregroundColor: Colors.white,
           ),
           inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.blue, width: 2),
+              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
             ),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              elevation: 2,
+              elevation: 0,
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -92,7 +85,7 @@ class MyApp extends StatelessWidget {
             case '/signup':
               return MaterialPageRoute(builder: (_) => const SignupPage());
             case '/home':
-              return MaterialPageRoute(builder: (_) => const HomePage());
+              return MaterialPageRoute(builder: (_) => const MainShell());
             case '/resources':
               return MaterialPageRoute(builder: (_) => const ResourcesPage());
             case '/resource_detail':
@@ -105,18 +98,13 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (_) => BookingPage(resource: resource),
               );
-            case '/my_reservations':
+            case '/edit_reservation':
+              final reservation = settings.arguments as ReservationModel;
               return MaterialPageRoute(
-                  builder: (_) => const MyReservationsPage());
-            // ── NOUVELLE ROUTE : vue agenda calendrier ──────────────────────
-            case '/calendar':
-              return MaterialPageRoute(builder: (_) => const CalendarPage());
+                builder: (_) => EditReservationPage(reservation: reservation),
+              );
             case '/admin':
               return MaterialPageRoute(builder: (_) => const AdminPage());
-            case '/profile':
-              return MaterialPageRoute(builder: (_) => ProfilePage());
-            case '/notifications':
-              return MaterialPageRoute(builder: (_) => NotificationsPage());
             default:
               return MaterialPageRoute(builder: (_) => const AuthWrapper());
           }
@@ -146,13 +134,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkAutoLogin() async {
     final rememberMe = await PreferencesService.getRememberMe();
     if (rememberMe) {
-      // L'email est sauvegardé, mais l'utilisateur devra entrer son mot de passe
       await PreferencesService.getSavedEmail();
     }
     if (mounted) {
-      setState(() {
-        _isCheckingAutoLogin = false;
-      });
+      setState(() => _isCheckingAutoLogin = false);
     }
   }
 
@@ -167,12 +152,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-
-        final user = snapshot.data;
-        if (user != null) {
-          return const HomePage();
-        }
-
+        if (snapshot.data != null) return const MainShell();
         return const LoginPage();
       },
     );

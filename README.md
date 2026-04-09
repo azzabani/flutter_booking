@@ -1,200 +1,81 @@
-# 📅 Booky — FlutterBooking
+# 📦 FlutterBooking — Améliorations UI & Fonctionnalités
 
-Application mobile Flutter de réservation de ressources (salles, véhicules, matériels) avec gestion des rôles, calendrier interactif et notifications en temps réel.
+## 🆕 Fichiers à remplacer / ajouter
 
----
+### Nouveaux fichiers (créer)
+| Chemin | Description |
+|--------|-------------|
+| `lib/views/home/main_shell.dart` | **NOUVEAU** — Shell avec Bottom Navigation Bar (5 onglets) |
+| `lib/views/calendar/edit_reservation_page.dart` | **NOUVEAU** — Page modification d'une réservation (manquait dans le CDC) |
 
-## 🚀 Fonctionnalités
-
-### Authentification & Profil
-- Connexion / Inscription avec Firebase Auth
-- Gestion des rôles : **utilisateur**, **manager**, **admin**
-- Page profil éditable (nom, email, mot de passe)
-- Option "Se souvenir de moi"
-
-### Catalogue de ressources
-- Liste des ressources avec filtres par catégorie
-- Affichage : image, nom, description, capacité
-- CRUD complet côté admin (ajout, modification, suppression)
-
-### Réservation
-- Vue calendrier des créneaux disponibles (`table_calendar`)
-- Sélection d'un jour et d'un créneau horaire
-- Vérification des conflits en temps réel
-- Validation par un manager/admin
-- Annulation possible par l'utilisateur
-
-### Notifications in-app
-- Confirmation de réservation
-- Validation / Rejet par un admin
-- Badge de notifications non lues en temps réel
-
-### Administration
-- Tableau de bord avec statistiques temps réel
-- Gestion des ressources (CRUD)
-- Gestion et validation des réservations
-- Vue des réservations par statut
+### Fichiers à remplacer
+| Chemin | Changements |
+|--------|-------------|
+| `lib/main.dart` | Routes vers `MainShell` + nouvelle route `/edit_reservation` |
+| `lib/views/home/home_page.dart` | Dashboard moderne avec SliverAppBar, stats cards, "Prochaines réservations" |
+| `lib/views/calendar/my_reservations_page.dart` | Onglets À venir / En attente / Historique + bouton **Modifier** |
+| `lib/views/admin/admin_page.dart` | 4 onglets : Dashboard / Ressources / Validation / Toutes |
+| `lib/views/admin/admin_dashboard_page.dart` | Dashboard avec graphiques : barres hebdo, statuts, top ressources, récentes |
 
 ---
 
-## 🏗️ Architecture
+## ✅ Ce qui est corrigé / ajouté vs cahier des charges
 
-```
-lib/
-├── models/
-│   ├── user_model.dart          # Modèle utilisateur avec rôles
-│   ├── resource_model.dart      # Modèle ressource
-│   └── reservation_model.dart   # Modèle réservation avec helpers
-├── services/
-│   ├── auth_service.dart        # Firebase Auth + Firestore users
-│   ├── reservation_service.dart # CRUD réservations + détection conflits
-│   ├── notification_service.dart# Notifications Firestore
-│   └── preferences_service.dart # SharedPreferences (remember me)
-├── providers/
-│   ├── auth_provider.dart       # État utilisateur connecté
-│   ├── resource_provider.dart   # Liste ressources + filtres
-│   └── calendar_provider.dart   # État calendrier + réservations
-├── views/
-│   ├── auth/                    # Login, Signup
-│   ├── home/                    # Page d'accueil
-│   ├── resources/               # Liste et détail des ressources
-│   ├── calendar/                # Booking, agenda, mes réservations
-│   ├── admin/                   # Dashboard, ressources, validations
-│   ├── profile/                 # Page profil éditable
-│   └── notifications/           # Liste des notifications
-├── widgets/
-│   ├── calendar_widget.dart     # Widget calendrier réutilisable
-│   ├── reservation_modal.dart   # Modal détail réservation
-│   └── resource_card.dart       # Carte ressource
-└── main.dart                    # Point d'entrée + MultiProvider + routes
-```
+### 1. Navigation (Bottom Navigation Bar)
+- Avant : page Home avec liste de boutons
+- Après : `NavigationBar` Material 3 avec 5 destinations permanentes
+- FAB "Admin" visible uniquement pour admin/manager
 
----
+### 2. Modification de réservation (CDC : "Annulation/modification possible")
+- Avant : seulement annulation
+- Après : bouton Modifier → `EditReservationPage` avec calendrier + créneaux
+- La modification remet le statut à `pending` (besoin de re-validation)
+- Notification in-app envoyée à l'utilisateur
 
-## 🛠️ Stack technique
+### 3. Home Dashboard
+- Gradient AppBar avec heure de la journée (Bonjour / Bon après-midi / Bonsoir)
+- 3 stat cards : Ressources / En attente / Confirmées
+- 3 quick actions avec couleurs distinctes
+- Section "Prochaines réservations" avec vraies données Firestore
 
-| Technologie | Usage |
-|---|---|
-| Flutter | Framework mobile |
-| Firebase Auth | Authentification |
-| Cloud Firestore | Base de données temps réel |
-| Provider | Gestion d'état |
-| table_calendar | Affichage calendrier |
-| shared_preferences | Persistance locale |
-| intl | Formatage dates (fr_FR) |
+### 4. Mes réservations avec onglets
+- Onglet "À venir" : confirmées dans le futur
+- Onglet "En attente" : pending
+- Onglet "Historique" : annulées/rejetées
+- Cards avec indicateur couleur selon statut
+- Boutons Modifier + Annuler sur les réservations actives
+
+### 5. Dashboard Admin avec graphiques
+- Vue d'ensemble : 6 indicateurs KPI
+- Graphique barres : réservations 7 derniers jours
+- Répartition statuts (progress bars)
+- Top 5 ressources les plus demandées
+- Liste des 5 réservations les plus récentes
 
 ---
 
-## ⚙️ Installation
-
-### Prérequis
-- Flutter SDK ≥ 3.9
-- Compte Firebase avec projet configuré
-
-### Étapes
+## 🛠️ Instructions d'intégration
 
 ```bash
-# 1. Cloner le projet
-git clone https://github.com/votre-username/flutter_booking.git
-cd flutter_booking
+# 1. Copier les fichiers dans ton projet
+cp main.dart lib/main.dart
+cp main_shell.dart lib/views/home/main_shell.dart
+cp home_page.dart lib/views/home/home_page.dart
+cp my_reservations_page.dart lib/views/calendar/my_reservations_page.dart
+cp edit_reservation_page.dart lib/views/calendar/edit_reservation_page.dart
+cp admin_page.dart lib/views/admin/admin_page.dart
+cp admin_dashboard_page.dart lib/views/admin/admin_dashboard_page.dart
 
-# 2. Installer les dépendances
-flutter pub get
+# 2. Vérifier les imports dans main.dart
+# → Supprimer les imports des anciennes pages non utilisées
+#   (calendar_page, my_reservations_page sont maintenant dans MainShell)
 
-# 3. Configurer Firebase
-# Placer le fichier google-services.json dans android/app/
-# Placer GoogleService-Info.plist dans ios/Runner/
-
-# 4. Lancer l'application
+# 3. Hot restart
 flutter run
 ```
 
----
+## ⚠️ Notes importantes
 
-## 🔥 Configuration Firestore
-
-### Collections requises
-
-**users**
-```json
-{
-  "name": "string",
-  "email": "string",
-  "role": "user | manager | admin",
-  "createdAt": "timestamp"
-}
-```
-
-**resources**
-```json
-{
-  "name": "string",
-  "description": "string",
-  "image": "string",
-  "capacity": "number",
-  "category": "string"
-}
-```
-
-**reservations**
-```json
-{
-  "resourceId": "string",
-  "userId": "string",
-  "userName": "string",
-  "startTime": "timestamp",
-  "endTime": "timestamp",
-  "status": "pending | confirmed | cancelled | rejected",
-  "notes": "string",
-  "createdAt": "timestamp"
-}
-```
-
-**notifications**
-```json
-{
-  "userId": "string",
-  "title": "string",
-  "message": "string",
-  "type": "reservation | validation | cancellation",
-  "reservationId": "string",
-  "isRead": "boolean",
-  "createdAt": "timestamp"
-}
-```
-
-### Index Firestore requis
-Dans la console Firebase → Firestore → Index, créer :
-- Collection `notifications` : `userId` (ASC) + `createdAt` (DESC)
-
----
-
-## 👥 Rôles utilisateurs
-
-| Rôle | Accès |
-|---|---|
-| **user** | Voir les ressources, créer/annuler ses réservations |
-| **manager** | + Valider/rejeter les réservations |
-| **admin** | + CRUD ressources, voir toutes les réservations, dashboard |
-
----
-
-## 📊 Critères de validation
-
-| Critère | Statut |
-|---|---|
-| UI claire et responsive | ✅ |
-| Auth + rôles | ✅ |
-| Catalogue ressources + CRUD admin | ✅ |
-| Calendrier + réservation | ✅ |
-| Détection des conflits | ✅ |
-| Validation manager | ✅ |
-| Notifications in-app | ✅ |
-| Dashboard admin | ✅ |
-| Documentation README | ✅ |
-
----
-
-## 👨‍💻 Auteur
-
-Projet réalisé dans le cadre du cours **SUP4 DEV — Projet Flutter 03**.
+- `CalendarPage`, `ProfilePage`, `NotificationsPage` et `ResourcesPage` **sont maintenant dans le MainShell** (bottom nav), pas besoin de les garder dans les routes sauf pour la navigation directe.
+- La route `/notifications` reste accessible via l'icône cloche dans la AppBar de Home.
+- L'`AuthWrapper` redirige maintenant vers `MainShell` au lieu de `HomePage`.

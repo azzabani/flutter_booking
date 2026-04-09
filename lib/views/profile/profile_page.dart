@@ -82,11 +82,18 @@ class _ProfilePageState extends State<ProfilePage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                  'Un email de vérification a été envoyé à la nouvelle adresse.'),
+                'Un email de vérification a été envoyé. Veuillez cliquer sur le lien pour confirmer.',
+              ),
               backgroundColor: Colors.orange,
+              duration: Duration(seconds: 5),
             ),
           );
+          await _authService.signOut();
+          if (mounted) {
+            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+          }
         }
+        return;
       }
 
       if (mounted) {
@@ -139,7 +146,6 @@ class _ProfilePageState extends State<ProfilePage> {
       final user = _authService.currentUser;
       if (user == null || user.email == null) return;
 
-      // Ré-authentifier l'utilisateur avant de changer le mot de passe
       final credential = EmailAuthProvider.credential(
         email: user.email!,
         password: _currentPasswordController.text,
@@ -171,6 +177,68 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer mon compte'),
+        content: const Text(
+          'Cette action est irréversible. Toutes vos données seront supprimées. '
+          'Voulez-vous vraiment continuer ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        final user = _authService.currentUser;
+        if (user != null) {
+          // Supprimer les réservations
+          final reservations = await _firestore
+              .collection('reservations')
+              .where('userId', isEqualTo: user.uid)
+              .get();
+          for (var doc in reservations.docs) {
+            await doc.reference.delete();
+          }
+          
+          // Supprimer le document utilisateur
+          await _firestore.collection('users').doc(user.uid).delete();
+          
+          // Supprimer l'utilisateur
+          await user.delete();
+          
+          if (mounted) {
+            Navigator.pushNamedAndRemoveUntil(context, '/signup', (route) => false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Compte supprimé'), backgroundColor: Colors.red),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -213,8 +281,7 @@ class _ProfilePageState extends State<ProfilePage> {
           else
             TextButton(
               onPressed: () => setState(() => _isEditing = false),
-              child: const Text('Annuler',
-                  style: TextStyle(color: Colors.white)),
+              child: const Text('Annuler', style: TextStyle(color: Colors.white)),
             ),
         ],
       ),
@@ -226,7 +293,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // ── Avatar ──────────────────────────────────────────
+                    // Avatar
                     Center(
                       child: Stack(
                         children: [
@@ -248,8 +315,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             bottom: 0,
                             right: 0,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 color: _roleColor,
                                 borderRadius: BorderRadius.circular(12),
@@ -270,7 +336,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     const SizedBox(height: 32),
 
-                    // ── Informations ────────────────────────────────────
                     _SectionTitle('Informations personnelles'),
                     const SizedBox(height: 16),
 
@@ -281,8 +346,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         label: 'Nom complet',
                         icon: Icons.person_outline,
                       ),
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Champ requis' : null,
+                      validator: (v) => v == null || v.trim().isEmpty ? 'Champ requis' : null,
                     ),
                     const SizedBox(height: 16),
 
@@ -312,8 +376,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue.shade700,
                             foregroundColor: Colors.white,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
                       ),
@@ -323,13 +386,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     const Divider(),
                     const SizedBox(height: 16),
 
-                    // ── Mot de passe ────────────────────────────────────
                     _SectionTitle('Sécurité'),
                     const SizedBox(height: 16),
 
                     GestureDetector(
-                      onTap: () => setState(
-                          () => _showPasswordSection = !_showPasswordSection),
+                      onTap: () => setState(() => _showPasswordSection = !_showPasswordSection),
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -339,8 +400,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.lock_outline,
-                                color: Colors.grey.shade600),
+                            Icon(Icons.lock_outline, color: Colors.grey.shade600),
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Text(
@@ -349,9 +409,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             Icon(
-                              _showPasswordSection
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.keyboard_arrow_down,
+                              _showPasswordSection ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                               color: Colors.grey.shade600,
                             ),
                           ],
@@ -368,11 +426,8 @@ class _ProfilePageState extends State<ProfilePage> {
                           label: 'Mot de passe actuel',
                           icon: Icons.lock_outline,
                           suffix: IconButton(
-                            icon: Icon(_obscureCurrent
-                                ? Icons.visibility_off
-                                : Icons.visibility),
-                            onPressed: () => setState(
-                                () => _obscureCurrent = !_obscureCurrent),
+                            icon: Icon(_obscureCurrent ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
                           ),
                         ),
                       ),
@@ -384,11 +439,8 @@ class _ProfilePageState extends State<ProfilePage> {
                           label: 'Nouveau mot de passe',
                           icon: Icons.lock_reset,
                           suffix: IconButton(
-                            icon: Icon(_obscureNew
-                                ? Icons.visibility_off
-                                : Icons.visibility),
-                            onPressed: () =>
-                                setState(() => _obscureNew = !_obscureNew),
+                            icon: Icon(_obscureNew ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setState(() => _obscureNew = !_obscureNew),
                           ),
                         ),
                       ),
@@ -400,11 +452,8 @@ class _ProfilePageState extends State<ProfilePage> {
                           label: 'Confirmer le nouveau mot de passe',
                           icon: Icons.lock_reset,
                           suffix: IconButton(
-                            icon: Icon(_obscureConfirm
-                                ? Icons.visibility_off
-                                : Icons.visibility),
-                            onPressed: () => setState(
-                                () => _obscureConfirm = !_obscureConfirm),
+                            icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                           ),
                         ),
                       ),
@@ -418,12 +467,26 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange.shade700,
                             foregroundColor: Colors.white,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
                       ),
                     ],
+
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _deleteAccount,
+                        icon: const Icon(Icons.delete_forever),
+                        label: const Text('Supprimer mon compte'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
 
                     const SizedBox(height: 40),
                   ],

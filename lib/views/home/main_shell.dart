@@ -1,0 +1,130 @@
+// lib/views/home/main_shell.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_booking/services/auth_service.dart';
+import 'package:flutter_booking/views/home/home_page.dart';
+import 'package:flutter_booking/views/resources/resources_page.dart';
+import 'package:flutter_booking/views/calendar/calendar_page.dart';
+import 'package:flutter_booking/views/calendar/my_reservations_page.dart';
+import 'package:flutter_booking/views/profile/profile_page.dart';
+
+class MainShell extends StatefulWidget {
+  final int initialIndex;
+  const MainShell({super.key, this.initialIndex = 0});
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  late int _currentIndex;
+  final AuthService _authService = AuthService();
+  String? _userRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final role = await _authService.getUserRole();
+    if (mounted) setState(() => _userRole = role);
+  }
+
+  List<_ShellPage> get _pages => [
+        _ShellPage(
+          label: 'Accueil',
+          icon: Icons.home_outlined,
+          activeIcon: Icons.home,
+          page: const HomePage(),
+        ),
+        _ShellPage(
+          label: 'Ressources',
+          icon: Icons.inventory_2_outlined,
+          activeIcon: Icons.inventory_2,
+          page: const ResourcesPage(),
+        ),
+        _ShellPage(
+          label: 'Calendrier',
+          icon: Icons.calendar_month_outlined,
+          activeIcon: Icons.calendar_month,
+          page: const CalendarPage(),
+        ),
+        _ShellPage(
+          label: 'Réservations',
+          icon: Icons.bookmark_border,
+          activeIcon: Icons.bookmark,
+          page: const MyReservationsPage(),
+        ),
+        _ShellPage(
+          label: 'Profil',
+          icon: Icons.person_outline,
+          activeIcon: Icons.person,
+          page: ProfilePage(),
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = _pages;
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: pages.map((p) => p.page).toList(),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          backgroundColor: Colors.white,
+          indicatorColor: const Color(0xFF2563EB).withOpacity(0.12),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: pages
+              .map(
+                (p) => NavigationDestination(
+                  icon: Icon(p.icon),
+                  selectedIcon: Icon(p.activeIcon, color: const Color(0xFF2563EB)),
+                  label: p.label,
+                ),
+              )
+              .toList(),
+        ),
+      ),
+      // FAB pour admin/manager
+      floatingActionButton: (_userRole == 'admin' || _userRole == 'manager')
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.pushNamed(context, '/admin'),
+              icon: const Icon(Icons.admin_panel_settings),
+              label: const Text('Admin'),
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              elevation: 3,
+            )
+          : null,
+    );
+  }
+}
+
+class _ShellPage {
+  final String label;
+  final IconData icon;
+  final IconData activeIcon;
+  final Widget page;
+
+  const _ShellPage({
+    required this.label,
+    required this.icon,
+    required this.activeIcon,
+    required this.page,
+  });
+}

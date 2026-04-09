@@ -1,7 +1,6 @@
 // lib/widgets/reservation_modal.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_booking/models/resource_model.dart';
 import 'package:flutter_booking/services/auth_service.dart';
 
