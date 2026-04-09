@@ -1,4 +1,37 @@
-# 📦 FlutterBooking — Améliorations UI & Fonctionnalités
+# 📦 FlutterBooking — Application de Réservation
+
+## 📱 Description
+Application mobile Flutter pour la gestion de réservations de ressources avec interface utilisateur moderne et système d'administration complet.
+
+## ✨ Fonctionnalités principales
+- **Authentification** : Connexion sécurisée avec Firebase Auth
+- **Réservations** : Création, modification et annulation de réservations
+- **Calendrier** : Vue calendrier interactive pour la sélection de créneaux
+- **Dashboard** : Tableau de bord avec statistiques en temps réel
+- **Administration** : Interface complète pour la gestion des ressources et validations
+- **Notifications** : Système de notifications in-app
+- **Profil utilisateur** : Gestion des informations personnelles
+
+## 🛠️ Technologies utilisées
+- **Framework** : Flutter 3.x
+- **Backend** : Firebase (Firestore, Auth, Storage)
+- **State Management** : Provider
+- **UI/UX** : Material Design 3
+- **Navigation** : Go Router
+
+## 📁 Structure du projet
+```
+lib/
+├── main.dart                    # Point d'entrée de l'application
+├── models/                      # Modèles de données
+├── services/                    # Services Firebase et API
+├── views/                       # Pages et interfaces utilisateur
+│   ├── home/                   # Page d'accueil et dashboard
+│   ├── calendar/               # Gestion des réservations
+│   ├── admin/                  # Interface d'administration
+│   └── auth/                   # Authentification
+└── widgets/                     # Composants réutilisables
+```
 
 ## 🆕 Fichiers à remplacer / ajouter
 
