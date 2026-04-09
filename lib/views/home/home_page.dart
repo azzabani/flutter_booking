@@ -13,16 +13,23 @@ class _HomePageState extends State<HomePage> {
   final AuthService _authService = AuthService();
   String? _userName;
   String? _userRole;
+  String? _userEmail;
+  int _pendingReservations = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-     }
+    _loadPendingReservations();
+  }
 
   Future<void> _loadUserData() async {
     final user = _authService.currentUser;
     if (user != null) {
+      setState(() {
+        _userEmail = user.email;
+      });
+      
       final userData = await _authService.getUserData(user.uid);
       if (userData != null && mounted) {
         setState(() {
@@ -33,13 +40,48 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _logout() async {
-    await _authService.signOut();
+  Future<void> _loadPendingReservations() async {
+    // TODO: Charger le nombre de réservations en attente depuis Firebase
+    // Pour l'instant, on simule
+    await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      setState(() {
+        _pendingReservations = 3; // Exemple
+      });
     }
   }
-   @override
+
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Déconnexion'),
+        content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Se déconnecter'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      await _authService.signOut();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
@@ -50,7 +92,7 @@ class _HomePageState extends State<HomePage> {
             colors: [
               Colors.blue.shade50,
               Colors.white,
-              Colors.blue.shade50,
+              Colors.blue.shade100,
             ],
           ),
         ),
@@ -99,36 +141,75 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             const SizedBox(height: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getRoleColor().withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _getRoleText(),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _getRoleColor(),
-                                  fontWeight: FontWeight.w500,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getRoleColor().withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    _getRoleText(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _getRoleColor(),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                if (_userEmail != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.email,
+                                          size: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _userEmail!,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.blue.shade400,
+                                Colors.blue.shade700,
+                              ],
+                            ),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.event_seat,
                             size: 30,
-                            color: Colors.blue.shade700,
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -152,43 +233,118 @@ class _HomePageState extends State<HomePage> {
                         subtitle: 'Consulter et réserver',
                         icon: Icons.inventory_2_outlined,
                         color: Colors.blue,
+                        badge: _pendingReservations,
                         onTap: () {
-                          // Naviguer vers la liste des ressources
                           Navigator.pushNamed(context, '/resources');
                         },
                       ),
                       
                       const SizedBox(height: 15),
                       
-                      // Section calendrier
+                      // Section mes réservations
                       _buildMenuCard(
                         context,
-                        title: 'Mon calendrier',
-                        subtitle: 'Voir mes réservations',
+                        title: 'Mes réservations',
+                        subtitle: 'Voir et gérer mes réservations',
                         icon: Icons.calendar_today,
                         color: Colors.green,
+                        badge: _pendingReservations,
                         onTap: () {
-                          // Naviguer vers le calendrier
-                          Navigator.pushNamed(context, '/calendar');
-                          },
+                          Navigator.pushNamed(context, '/my_reservations');
+                        },
+                      ),
+                      
+                      const SizedBox(height: 15),
+                      
+                      // Section notifications
+                      _buildMenuCard(
+                        context,
+                        title: 'Notifications',
+                        subtitle: 'Voir vos notifications',
+                        icon: Icons.notifications,
+                        color: Colors.red,
+                        onTap: () => Navigator.pushNamed(context, '/notifications'),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      
+                      
+                      // Section profil
+                      _buildMenuCard(
+                        context,
+                        title: 'Mon profil',
+                        subtitle: 'Gérer mes informations',
+                        icon: Icons.person_outline,
+                        color: Colors.purple,
+                        onTap: () => Navigator.pushNamed(context, '/profile'),
                       ),
                       
                       const SizedBox(height: 15),
                       
                       // Section admin (visible seulement pour admin/manager)
                       if (_userRole == 'admin' || _userRole == 'manager')
-                        _buildMenuCard(
-                          context,
-                          title: 'Administration',
-                          subtitle: 'Gérer les ressources et utilisateurs',
-                          icon: Icons.admin_panel_settings,
-                          color: Colors.orange,
-                          onTap: () {
-                            // Naviguer vers l'admin
-                            Navigator.pushNamed(context, '/admin');
-                          },
+                        Column(
+                          children: [
+                            _buildMenuCard(
+                              context,
+                              title: 'Administration',
+                              subtitle: 'Gérer les ressources et utilisateurs',
+                              icon: Icons.admin_panel_settings,
+                              color: Colors.orange,
+                              onTap: () {
+                                Navigator.pushNamed(context, '/admin');
+                              },
+                            ),
+                            const SizedBox(height: 15),
+                          ],
                         ),
-                        const Spacer(),
+                      
+                      const Spacer(),
+                      
+                      // Statistiques rapides
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildStatItem(
+                              Icons.inventory,
+                              'Ressources',
+                              '12',
+                              Colors.blue,
+                            ),
+                            Container(
+                              height: 30,
+                              width: 1,
+                              color: Colors.grey.shade300,
+                            ),
+                            _buildStatItem(
+                              Icons.event_busy,
+                              'Réservations',
+                              '$_pendingReservations',
+                              Colors.green,
+                            ),
+                            Container(
+                              height: 30,
+                              width: 1,
+                              color: Colors.grey.shade300,
+                            ),
+                            _buildStatItem(
+                              Icons.star,
+                              'Points',
+                              '150',
+                              Colors.amber,
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 15),
                       
                       // Bouton déconnexion
                       SizedBox(
@@ -205,7 +361,7 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -218,14 +374,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
+    return Column(
+      children: [
+        Icon(icon, size: 24, color: color),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMenuCard(
     BuildContext context, {
     required String title,
     required String subtitle,
     required IconData icon,
     required Color color,
+    int? badge,
     required VoidCallback onTap,
-     }) {
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -260,12 +441,36 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (badge != null && badge > 0)
+                        Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$badge',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -289,6 +494,86 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showProfileDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mon profil'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.blue.shade100,
+              child: Text(
+                _userName?.substring(0, 1).toUpperCase() ?? 'U',
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _userName ?? 'Utilisateur',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _userEmail ?? '',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: _getRoleColor().withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _getRoleText(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _getRoleColor(),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Naviguer vers page d'édition du profil
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Fonctionnalité à venir'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Modifier'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getRoleColor() {
     switch (_userRole) {
       case 'admin':
@@ -302,7 +587,7 @@ class _HomePageState extends State<HomePage> {
 
   String _getRoleText() {
     switch (_userRole) {
-       case 'admin':
+      case 'admin':
         return 'Administrateur';
       case 'manager':
         return 'Manager';

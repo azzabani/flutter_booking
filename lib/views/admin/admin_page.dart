@@ -4,6 +4,7 @@ import 'package:flutter_booking/views/admin/admin_resource_page.dart';
 import 'package:flutter_booking/views/admin/admin_reservations_page.dart';
 import 'package:flutter_booking/views/admin/admin_validate_page.dart';  // ← Nouvel import
 import 'package:flutter_booking/services/auth_service.dart';
+import 'package:flutter_booking/views/admin/admin_dashboard_page.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -97,19 +98,23 @@ class _AdminPageState extends State<AdminPage> {
           });
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
-            label: 'Ressources',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Réservations',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.verified),
-            label: 'Validations',
-          ),
-        ],
+  BottomNavigationBarItem(
+    icon: Icon(Icons.dashboard),
+    label: 'Dashboard',
+  ),
+  BottomNavigationBarItem(
+    icon: Icon(Icons.inventory),
+    label: 'Ressources',
+  ),
+  BottomNavigationBarItem(
+    icon: Icon(Icons.calendar_today),
+    label: 'Réservations',
+  ),
+  BottomNavigationBarItem(
+    icon: Icon(Icons.verified),
+    label: 'Validations',
+  ),
+],
         selectedItemColor: Colors.blue.shade700,
         unselectedItemColor: Colors.grey,
       ),
@@ -118,14 +123,16 @@ class _AdminPageState extends State<AdminPage> {
 
   Widget _getBody() {
     switch (_selectedIndex) {
-      case 0:
-        return const AdminResourcePage();
-      case 1:
-        return const AdminReservationsPage();
-      case 2:
-        return const AdminValidatePage();
-      default:
-        return const AdminResourcePage();
-    }
+  case 0:
+    return const AdminDashboardPage();
+  case 1:
+    return const AdminResourcePage();
+  case 2:
+    return const AdminReservationsPage();
+  case 3:
+    return const AdminValidatePage();
+  default:
+    return const AdminDashboardPage();
+  }
   }
 }

@@ -23,12 +23,11 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
 
   // ─── Mise à jour du statut ─────────────────────────────────────────────────
 
-  Future<void> _updateStatus(Reservation reservation, String status) async {
+  Future<void> _updateStatus(ReservationModel reservation, String status) async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
     try {
-      // FIX BUG 4 : on utilise reservation.resourceId déjà validé (non vide)
       final resourceId = reservation.resourceId;
 
       // Nom de la ressource
@@ -148,15 +147,12 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
   }
 
   // ─── Liste ─────────────────────────────────────────────────────────────────
-  //
-  // FIX BUG 1 & 2 : on utilise getAllReservations() du service qui fait
-  // le filtrage + tri côté client → aucun index composite requis.
 
   Widget _buildList() {
     final statusFilter =
         _selectedTab == 'all' ? null : _selectedTab;
 
-    return StreamBuilder<List<Reservation>>(
+    return StreamBuilder<List<ReservationModel>>(
       stream: _reservationService.getAllReservations(statusFilter: statusFilter),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -240,7 +236,7 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
 
   // ─── Carte réservation ─────────────────────────────────────────────────────
 
-  Widget _buildCard(Reservation reservation) {
+  Widget _buildCard(ReservationModel reservation) {
     final status = reservation.status;
     final statusColor = _statusColor(status);
     final statusEmoji = _statusEmoji(status);
@@ -407,9 +403,6 @@ class _AdminValidatePageState extends State<AdminValidatePage> {
   }
 
   // ─── Nom de la ressource (sécurisé) ───────────────────────────────────────
-  //
-  // FIX BUG 4 : on vérifie que resourceId est non-vide avant d'appeler
-  // Firestore, sinon "document path must be a non-empty string".
 
   Widget _buildResourceName(String resourceId) {
     if (resourceId.isEmpty) {

@@ -1,18 +1,20 @@
 // lib/models/reservation_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Reservation {
+class ReservationModel {
   final String id;
   final String resourceId;
   final String userId;
   final String userName;
   final DateTime startTime;
   final DateTime endTime;
-  final String status; // 'pending' | 'confirmed' | 'cancelled' | 'rejected'
+  final String status; // pending, confirmed, cancelled, rejected
   final String? notes;
   final DateTime createdAt;
+  final DateTime? validatedAt;
+  final String? validatedBy;
 
-  const Reservation({
+  ReservationModel({
     required this.id,
     required this.resourceId,
     required this.userId,
@@ -22,35 +24,33 @@ class Reservation {
     required this.status,
     this.notes,
     required this.createdAt,
+    this.validatedAt,
+    this.validatedBy,
   });
 
-  // ─── Factory depuis Firestore ─────────────────────────────────────────────
-  //
-  // FIX : tous les champs sont protégés contre null.
-  // `createdAt` utilise DateTime.now() si serverTimestamp pas encore résolu.
+  // Getter pour vérifier si la réservation est active
+  bool get isActive => status == 'pending' || status == 'confirmed';
 
-  factory Reservation.fromFirestore(Map<String, dynamic> data, String id) {
-    DateTime parseTimestamp(dynamic value, {DateTime? fallback}) {
-      if (value == null) return fallback ?? DateTime.now();
-      if (value is Timestamp) return value.toDate();
-      return fallback ?? DateTime.now();
-    }
-
-    return Reservation(
+  // Convertir depuis Firestore
+  factory ReservationModel.fromFirestore(Map<String, dynamic> data, String id) {
+    return ReservationModel(
       id: id,
-      resourceId: (data['resourceId'] as String? ?? '').trim(),
-      userId: (data['userId'] as String? ?? '').trim(),
-      userName: data['userName'] as String? ?? 'Utilisateur',
-      startTime: parseTimestamp(data['startTime']),
-      endTime: parseTimestamp(data['endTime']),
-      status: data['status'] as String? ?? 'pending',
-      notes: data['notes'] as String?,
-      createdAt: parseTimestamp(data['createdAt']),
+      resourceId: data['resourceId'] ?? '',
+      userId: data['userId'] ?? '',
+      userName: data['userName'] ?? '',
+      startTime: (data['startTime'] as Timestamp).toDate(),
+      endTime: (data['endTime'] as Timestamp).toDate(),
+      status: data['status'] ?? 'pending',
+      notes: data['notes'],
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      validatedAt: data['validatedAt'] != null 
+          ? (data['validatedAt'] as Timestamp).toDate() 
+          : null,
+      validatedBy: data['validatedBy'],
     );
   }
 
-  // ─── Vers Firestore ───────────────────────────────────────────────────────
-
+  // Convertir vers Firestore
   Map<String, dynamic> toFirestore() {
     return {
       'resourceId': resourceId,
@@ -59,14 +59,15 @@ class Reservation {
       'startTime': Timestamp.fromDate(startTime),
       'endTime': Timestamp.fromDate(endTime),
       'status': status,
-      'notes': notes ?? '',
+      'notes': notes,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (validatedAt != null) 'validatedAt': Timestamp.fromDate(validatedAt!),
+      if (validatedBy != null) 'validatedBy': validatedBy,
     };
   }
 
-  // ─── copyWith ─────────────────────────────────────────────────────────────
-
-  Reservation copyWith({
+  // Copie avec modifications
+  ReservationModel copyWith({
     String? id,
     String? resourceId,
     String? userId,
@@ -76,8 +77,10 @@ class Reservation {
     String? status,
     String? notes,
     DateTime? createdAt,
+    DateTime? validatedAt,
+    String? validatedBy,
   }) {
-    return Reservation(
+    return ReservationModel(
       id: id ?? this.id,
       resourceId: resourceId ?? this.resourceId,
       userId: userId ?? this.userId,
@@ -87,26 +90,8 @@ class Reservation {
       status: status ?? this.status,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
+      validatedAt: validatedAt ?? this.validatedAt,
+      validatedBy: validatedBy ?? this.validatedBy,
     );
   }
-
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-
-  bool get isPending => status == 'pending';
-  bool get isConfirmed => status == 'confirmed';
-  bool get isCancelled => status == 'cancelled';
-  bool get isRejected => status == 'rejected';
-  bool get isActive => status == 'confirmed' || status == 'pending';
-
-  @override
-  String toString() =>
-      'Reservation(id: $id, resource: $resourceId, status: $status, '
-      'start: $startTime, end: $endTime)';
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is Reservation && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
 }
