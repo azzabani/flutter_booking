@@ -1,0 +1,113 @@
+@model Gestion_Stock.Models.Commercial
+
+@{
+    ViewData["Title"] = "Détails du commercial";
+}
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-action="Index" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1 class="mb-0"><i class="bi bi-briefcase"></i> @Model.Nom</h1>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-info-circle"></i> Informations</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-5">ID</dt>
+                        <dd class="col-sm-7">@Model.Id</dd>
+
+                        <dt class="col-sm-5">Nom</dt>
+                        <dd class="col-sm-7"><strong>@Model.Nom</strong></dd>
+
+                        <dt class="col-sm-5">Région</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.Region))
+                            {
+                                <span class="badge bg-secondary"><i class="bi bi-geo-alt"></i> @Model.Region</span>
+                            }
+                            else
+                            {
+                                <em class="text-muted">Non renseignée</em>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">Commission</dt>
+                        <dd class="col-sm-7"><span class="badge bg-success fs-6">@Model.Commission.ToString("F2") %</span></dd>
+
+                        <dt class="col-sm-5">Livraisons</dt>
+                        <dd class="col-sm-7"><span class="badge bg-info fs-6">@Model.Livraisons.Count</span></dd>
+                    </dl>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil"></i> Modifier
+                    </a>
+                    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Supprimer
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-truck"></i> Livraisons associées</h5>
+                    <span class="badge bg-info">@Model.Livraisons.Count</span>
+                </div>
+                <div class="card-body">
+                    @if (Model.Livraisons.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Date</th>
+                                        <th>Statut</th>
+                                        <th class="text-center">Commandes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var liv in Model.Livraisons)
+                                    {
+                                        <tr>
+                                            <td><strong>#@liv.Id</strong></td>
+                                            <td>@liv.DateLivraison.ToString("dd/MM/yyyy")</td>
+                                            <td>
+                                                @{
+                                                    var badgeClass = liv.Statut switch {
+                                                        "Livré" => "bg-success",
+                                                        "En attente" => "bg-warning text-dark",
+                                                        "En cours" => "bg-info",
+                                                        "Retour" => "bg-danger",
+                                                        _ => "bg-secondary"
+                                                    };
+                                                }
+                                                <span class="badge @badgeClass">@liv.Statut</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">@liv.Commandes.Count</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3"><i class="bi bi-inbox"></i> Aucune livraison pour ce commercial.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

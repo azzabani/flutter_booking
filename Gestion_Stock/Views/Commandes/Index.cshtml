@@ -1,0 +1,134 @@
+@model IEnumerable<Gestion_Stock.Models.CommandeAchat>
+@{
+    ViewData["Title"] = "Commandes d'achat";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-cart3"></i> Commandes d'achat</h1>
+    @if (User.IsInRole("Admin") || User.IsInRole("ChefCuisine"))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Nouvelle commande
+        </a>
+    }
+</div>
+
+<!-- Filtres -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Fournisseur</label>
+                <select name="fournisseurId" class="form-select form-select-sm" asp-items="ViewBag.Fournisseurs">
+                    <option value="">Tous les fournisseurs</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Statut</label>
+                <select name="statut" class="form-select form-select-sm">
+                    <option value="">Tous</option>
+                    <option value="En attente" selected="@(ViewBag.FiltreStatut == "En attente" ? "selected" : null)">En attente</option>
+                    <option value="Confirmée" selected="@(ViewBag.FiltreStatut == "Confirmée" ? "selected" : null)">Confirmée</option>
+                    <option value="Partielle" selected="@(ViewBag.FiltreStatut == "Partielle" ? "selected" : null)">Partielle</option>
+                    <option value="Livrée" selected="@(ViewBag.FiltreStatut == "Livrée" ? "selected" : null)">Livrée</option>
+                    <option value="Retour" selected="@(ViewBag.FiltreStatut == "Retour" ? "selected" : null)">Retour</option>
+                    <option value="Annulée" selected="@(ViewBag.FiltreStatut == "Annulée" ? "selected" : null)">Annulée</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Du</label>
+                <input type="date" name="dateDebut" class="form-control form-control-sm" value="@ViewBag.FiltreDateDebut" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Au</label>
+                <input type="date" name="dateFin" class="form-control form-control-sm" value="@ViewBag.FiltreDateFin" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i></button>
+            </div>
+            <div class="col-md-1">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-x"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Date</th>
+                            <th>Fournisseur</th>
+                            <th>Employé</th>
+                            <th class="text-end">HT</th>
+                            <th class="text-end">TVA</th>
+                            <th class="text-end">Total TTC</th>
+                            <th class="text-center">Statut</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            bool enRetard = (item.Statut == "En attente" || item.Statut == "Confirmée")
+                                            && item.DateCommande < DateTime.Now.AddDays(-7);
+                            <tr class="@(enRetard ? "table-warning" : "")">
+                                <td><strong style="color:#6366f1;">#@item.Id</strong></td>
+                                <td>
+                                    @item.DateCommande.ToString("dd/MM/yyyy")
+                                    @if (enRetard)
+                                    {
+                                        <br><span class="badge bg-danger" style="font-size:.65rem;">En retard</span>
+                                    }
+                                </td>
+                                <td>@(item.Fournisseur?.Nom ?? "—")</td>
+                                <td>@(item.Employe?.NomComplet ?? "—")</td>
+                                <td class="text-end">@item.SousTotal.ToString("N2") DT</td>
+                                <td class="text-end text-muted small">@item.MontantTVA.ToString("N2") DT</td>
+                                <td class="text-end fw-bold">@item.TotalFacture.ToString("N2") DT</td>
+                                <td class="text-center">
+                                    @switch (item.Statut)
+                                    {
+                                        case "Livrée": <span class="badge bg-success">@item.Statut</span> break;
+                                        case "En attente": <span class="badge bg-warning">@item.Statut</span> break;
+                                        case "Confirmée": <span class="badge bg-info">@item.Statut</span> break;
+                                        case "Partielle": <span class="badge bg-primary">@item.Statut</span> break;
+                                        case "Retour": <span class="badge bg-danger">@item.Statut</span> break;
+                                        case "Annulée": <span class="badge bg-secondary">@item.Statut</span> break;
+                                        default: <span class="badge bg-secondary">@item.Statut</span> break;
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                                        @if (User.IsInRole("Admin") || User.IsInRole("ChefCuisine"))
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-cart3"></i>
+                <p>Aucune commande trouvée</p>
+                @if (User.IsInRole("Admin") || User.IsInRole("ChefCuisine"))
+                {
+                    <a asp-action="Create" class="btn btn-primary btn-sm mt-2">Créer une commande</a>
+                }
+            </div>
+        }
+    </div>
+</div>

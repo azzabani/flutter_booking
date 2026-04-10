@@ -1,0 +1,56 @@
+@model IEnumerable<Gestion_Stock.Models.Categorie>
+@{
+    ViewData["Title"] = "Catégories";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-tags"></i> Catégories</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> Nouvelle catégorie
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Description</th>
+                        <th class="text-center">Produits</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><strong>@item.Nom</strong></td>
+                            <td><span class="text-muted">@(item.Description ?? "—")</span></td>
+                            <td class="text-center">
+                                <span class="badge" style="background:#eff6ff;color:#2563eb;">@item.Produits.Count produit(s)</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-tags"></i>
+                <p>Aucune catégorie enregistrée</p>
+                <a asp-action="Create" class="btn btn-primary btn-sm mt-2">Ajouter une catégorie</a>
+            </div>
+        }
+    </div>
+</div>

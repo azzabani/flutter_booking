@@ -1,0 +1,77 @@
+@model Gestion_Stock.Models.Categorie
+@{
+    ViewData["Title"] = "Détails catégorie";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-tag"></i> @Model.Nom</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning"><i class="bi bi-pencil me-1"></i> Modifier</a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Retour</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header" style="background:#fff;"><span style="font-weight:700;"><i class="bi bi-info-circle text-primary me-2"></i>Informations</span></div>
+            <div class="card-body">
+                <div class="info-grid" style="grid-template-columns:1fr;">
+                    <div class="info-item">
+                        <div class="info-label">Nom</div>
+                        <div class="info-value">@Model.Nom</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Description</div>
+                        <div class="info-value">@(string.IsNullOrEmpty(Model.Description) ? "—" : Model.Description)</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Nombre de produits</div>
+                        <div class="info-value"><span class="badge bg-primary">@Model.Produits.Count</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header" style="background:#fff;"><span style="font-weight:700;"><i class="bi bi-box text-success me-2"></i>Produits (@Model.Produits.Count)</span></div>
+            <div class="card-body p-0">
+                @if (Model.Produits.Any())
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>Référence</th><th>Nom</th><th class="text-end">Prix</th><th class="text-center">Stock</th></tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.Produits)
+                            {
+                                <tr>
+                                    <td><code>@(p.Reference ?? "—")</code></td>
+                                    <td>@p.Nom</td>
+                                    <td class="text-end">@p.PrixUnitaire.ToString("N2") DT</td>
+                                    <td class="text-center">
+                                        @if (p.StockActuel <= p.SeuilMin)
+                                        {
+                                            <span class="badge bg-danger">@p.StockActuel</span>
+                                        }
+                                        else if (p.StockActuel >= p.SeuilMax)
+                                        {
+                                            <span class="badge bg-warning">@p.StockActuel</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">@p.StockActuel</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state"><p>Aucun produit dans cette catégorie</p></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

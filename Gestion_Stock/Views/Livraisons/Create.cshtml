@@ -1,0 +1,85 @@
+@model Gestion_Stock.Models.Livraison
+@{
+    ViewData["Title"] = "Nouvelle livraison";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-truck"></i> Nouvelle livraison</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Retour</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                    <div class="form-section">
+                        <div class="form-section-title"><i class="bi bi-info-circle"></i> Informations</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="DateLivraison" class="form-label"></label>
+                                <input asp-for="DateLivraison" class="form-control" type="date" />
+                                <span asp-validation-for="DateLivraison" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Statut" class="form-label"></label>
+                                <select asp-for="Statut" class="form-select">
+                                    <option value="En attente">En attente</option>
+                                    <option value="Partielle">Partielle</option>
+                                    <option value="Complète">Complète</option>
+                                    <option value="Retour">Retour</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="CommercialId" class="form-label"></label>
+                                <select asp-for="CommercialId" class="form-select" asp-items="ViewBag.CommercialId">
+                                    <option value="">-- Sélectionner --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    <input asp-for="EstPartielle" class="form-check-input" type="checkbox" />
+                                    <label asp-for="EstPartielle" class="form-check-label">Livraison partielle</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title"><i class="bi bi-star"></i> Évaluation</div>
+                        <div class="mb-3">
+                            <label asp-for="NoteChiffre" class="form-label">Note (1-5)</label>
+                            <select asp-for="NoteChiffre" class="form-select">
+                                <option value="">-- Pas de note --</option>
+                                <option value="1">⭐ 1 — Très mauvais</option>
+                                <option value="2">⭐⭐ 2 — Mauvais</option>
+                                <option value="3">⭐⭐⭐ 3 — Moyen</option>
+                                <option value="4">⭐⭐⭐⭐ 4 — Bien</option>
+                                <option value="5">⭐⭐⭐⭐⭐ 5 — Excellent</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="NoteAvis" class="form-label"></label>
+                            <textarea asp-for="NoteAvis" class="form-control" rows="3" placeholder="Avis sur la livraison..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Note" class="form-label"></label>
+                            <textarea asp-for="Note" class="form-control" rows="2" placeholder="Note interne..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Enregistrer</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

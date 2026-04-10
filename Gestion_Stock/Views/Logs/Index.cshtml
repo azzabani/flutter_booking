@@ -1,0 +1,76 @@
+@model List<Gestion_Stock.Models.LogAction>
+@{
+    ViewData["Title"] = "Journal des actions";
+    int currentPage = ViewBag.Page ?? 1;
+    int prevPage = currentPage - 1;
+    int nextPage = currentPage + 1;
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-journal-text"></i> Journal des actions</h1>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Utilisateur</th>
+                            <th>Action</th>
+                            <th>Entité</th>
+                            <th>Détails</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model)
+                        {
+                            <tr>
+                                <td style="font-size:.8rem;white-space:nowrap;">@log.DateAction.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <strong>@(log.NomUtilisateur ?? "Système")</strong>
+                                    @if (log.Employe != null)
+                                    {
+                                        <br /><span class="badge" style="background:#eff6ff;color:#2563eb;font-size:.7rem;">@log.Employe.Role</span>
+                                    }
+                                </td>
+                                <td><span class="badge bg-primary">@log.Action</span></td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(log.Entite))
+                                    {
+                                        <span class="text-muted small">@log.Entite @(log.EntiteId.HasValue ? $"#{log.EntiteId}" : "")</span>
+                                    }
+                                </td>
+                                <td style="font-size:.82rem;max-width:300px;">@(log.Details ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-3">
+                <span class="text-muted small">Page @currentPage</span>
+                <div class="d-flex gap-2">
+                    @if (currentPage > 1)
+                    {
+                        <a asp-action="Index" asp-route-page="@prevPage" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-chevron-left"></i> Précédent
+                        </a>
+                    }
+                    @if (Model.Count == 50)
+                    {
+                        <a asp-action="Index" asp-route-page="@nextPage" class="btn btn-sm btn-outline-primary">
+                            Suivant <i class="bi bi-chevron-right"></i>
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state"><i class="bi bi-journal"></i><p>Aucune action enregistrée</p></div>
+        }
+    </div>
+</div>

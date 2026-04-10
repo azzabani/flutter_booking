@@ -1,0 +1,287 @@
+﻿@{
+    ViewData["Title"] = "Tableau de bord";
+    var stats = ViewBag.Statistiques as Gestion_Stock.Services.StatistiquesDto;
+    var alertes = ViewBag.Alertes as List<Gestion_Stock.Models.Alerte>;
+    var meilleuresOffres = ViewBag.MeilleuresOffres as List<Gestion_Stock.Services.MeilleureOffreDto>;
+    var commandesEnAttente = ViewBag.CommandesEnAttente as List<Gestion_Stock.Models.CommandeAchat>;
+}
+
+<!-- En-tête -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-0" style="font-size:1.6rem; font-weight:800; color:#0f172a;">
+            <i class="bi bi-speedometer2 text-primary me-2"></i>Tableau de bord
+        </h1>
+        <p class="text-muted mb-0" style="font-size:0.82rem;">
+            <i class="bi bi-cup-hot me-1"></i>Matières premières · @DateTime.Now.ToString("dddd dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))
+        </p>
+    </div>
+    <a asp-controller="Commandes" asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> Nouvelle commande
+    </a>
+</div>
+
+<!-- Cartes statistiques -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card blue">
+            <div class="stat-label">Produits</div>
+            <div class="stat-value">@(stats?.NombreProduits ?? 0)</div>
+            <small style="opacity:.75; font-size:.75rem;">Total en catalogue</small>
+            <i class="bi bi-box-seam stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card green">
+            <div class="stat-label">Valeur stock</div>
+            <div class="stat-value" style="font-size:1.4rem;">@(stats?.ValeurTotaleStock.ToString("N0") ?? "0") DT</div>
+            <small style="opacity:.75; font-size:.75rem;">Valeur totale</small>
+            <i class="bi bi-cash-stack stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card orange">
+            <div class="stat-label">Ruptures</div>
+            <div class="stat-value">@(stats?.ProduitsEnRupture ?? 0)</div>
+            <small style="opacity:.75; font-size:.75rem;">Produits en rupture</small>
+            <i class="bi bi-exclamation-triangle stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card cyan">
+            <div class="stat-label">Commandes</div>
+            <div class="stat-value">@(stats?.NombreCommandes ?? 0)</div>
+            <small style="opacity:.75; font-size:.75rem;">Total commandes</small>
+            <i class="bi bi-cart3 stat-icon"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Ligne 2 stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-tags text-primary" style="font-size:1.3rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.5rem;font-weight:800;color:#0f172a;">@(stats?.NombreCategories ?? 0)</div>
+                    <div style="font-size:.75rem;color:#64748b;font-weight:600;">Catégories</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-building text-success" style="font-size:1.3rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.5rem;font-weight:800;color:#0f172a;">@(stats?.NombreFournisseurs ?? 0)</div>
+                    <div style="font-size:.75rem;color:#64748b;font-weight:600;">Fournisseurs</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:10px;background:#fef2f2;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-arrow-up-circle text-danger" style="font-size:1.3rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.5rem;font-weight:800;color:#0f172a;">@(stats?.ProduitsSurstock ?? 0)</div>
+                    <div style="font-size:.75rem;color:#64748b;font-weight:600;">Surstock</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:10px;background:#fffbeb;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-bell text-warning" style="font-size:1.3rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size:1.5rem;font-weight:800;color:#0f172a;">@(stats?.NombreAlertesNonLues ?? 0)</div>
+                    <div style="font-size:.75rem;color:#64748b;font-weight:600;">Alertes actives</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row g-3 mb-4">
+
+    <!-- Alertes -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background:#fff;">
+                <span style="font-weight:700;color:#0f172a;">
+                    <i class="bi bi-bell-fill text-warning me-2"></i>Alertes de stock
+                    @if (alertes != null && alertes.Any())
+                    {
+                        <span class="badge bg-danger ms-1">@alertes.Count</span>
+                    }
+                </span>
+                @if (alertes != null && alertes.Any())
+                {
+                    <form asp-controller="Home" asp-action="MarquerToutesAlertesLues" method="post">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;">
+                            <i class="bi bi-check-all"></i> Tout lire
+                        </button>
+                    </form>
+                }
+            </div>
+            <div class="card-body p-3" style="max-height:320px;overflow-y:auto;">
+                @if (alertes != null && alertes.Any())
+                {
+                    @foreach (var alerte in alertes.Take(6))
+                    {
+                        <div class="alert-item @(alerte.TypeAlerte == "Approvisionnement" ? "approvisionnement" : "surstock")">
+                            <div class="alert-icon">
+                                @if (alerte.TypeAlerte == "Approvisionnement")
+                                {
+                                    <i class="bi bi-arrow-down-circle-fill text-warning"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-arrow-up-circle-fill text-info"></i>
+                                }
+                            </div>
+                            <div class="alert-content">
+                                <div class="alert-title">@alerte.TypeAlerte — @alerte.Produit?.Nom</div>
+                                <div class="alert-msg">@alerte.Message</div>
+                                <div class="alert-date"><i class="bi bi-clock me-1"></i>@alerte.DateCreation.ToString("dd/MM/yyyy HH:mm")</div>
+                            </div>
+                            <form asp-controller="Home" asp-action="MarquerAlerteLue" asp-route-id="@alerte.Id" method="post">
+                                <button type="submit" class="btn btn-sm btn-outline-success" style="padding:.2rem .5rem;">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem;opacity:1;"></i>
+                        <p class="mt-2 text-success fw-semibold">Aucune alerte active</p>
+                        <p class="text-muted" style="font-size:.8rem;">Tous les stocks sont dans les limites normales</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Produits les plus vendus -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header" style="background:#fff;">
+                <span style="font-weight:700;color:#0f172a;">
+                    <i class="bi bi-graph-up-arrow text-primary me-2"></i>
+                    Produits les plus consommés — @DateTime.Now.ToString("MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))
+                </span>
+            </div>
+            <div class="card-body p-0">
+                @{
+                    var consommations = ViewBag.ProduitsConsommes as List<Gestion_Stock.Services.ProduitConsommationDto>;
+                }
+                @if (consommations != null && consommations.Any())
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>#</th><th>Produit</th><th class="text-end">Qté sortie</th></tr></thead>
+                        <tbody>
+                            @{ int rank = 1; }
+                            @foreach (var p in consommations)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (rank == 1) { <span>🥇</span> }
+                                        else if (rank == 2) { <span>🥈</span> }
+                                        else if (rank == 3) { <span>🥉</span> }
+                                        else { <span class="text-muted">@rank</span> }
+                                    </td>
+                                    <td><strong>@p.NomProduit</strong></td>
+                                    <td class="text-end"><span class="badge bg-danger">@p.QuantiteSortie @p.Unite</span></td>
+                                </tr>
+                                rank++;
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state"><i class="bi bi-bar-chart"></i><p>Aucune consommation ce mois-ci</p></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Meilleures offres fournisseurs -->
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header" style="background:#fff;">
+                <span style="font-weight:700;color:#0f172a;">
+                    <i class="bi bi-tag-fill text-success me-2"></i>Fournisseur le moins cher par produit
+                </span>
+            </div>
+            <div class="card-body p-0">
+                @if (meilleuresOffres != null && meilleuresOffres.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Meilleur fournisseur</th>
+                                    <th class="text-end">Prix d'achat</th>
+                                    <th class="text-end">Délai livraison</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var offre in meilleuresOffres)
+                                {
+                                    <tr>
+                                        <td><strong>@offre.NomProduit</strong></td>
+                                        <td>
+                                            <i class="bi bi-building me-1 text-muted"></i>@offre.NomFournisseur
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="badge bg-success">@offre.PrixAchat.ToString("N2") DT</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="badge bg-light text-dark">
+                                                <i class="bi bi-clock me-1"></i>@offre.DelaiLivraison j
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <a asp-controller="Fournisseurs" asp-action="Details" asp-route-id="@offre.FournisseurId"
+                                               class="btn btn-sm btn-outline-primary" style="font-size:.75rem;">
+                                                Voir fournisseur
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-building"></i>
+                        <p>Aucune offre fournisseur disponible</p>
+                        <a asp-controller="Fournisseurs" asp-action="Create" class="btn btn-sm btn-primary mt-2">
+                            Ajouter un fournisseur
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

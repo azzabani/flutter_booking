@@ -1,0 +1,136 @@
+@model List<Gestion_Stock.Models.MouvementStock>
+@{
+    ViewData["Title"] = "Mouvements de stock";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-arrow-left-right"></i> Mouvements de stock</h1>
+    @if (User.IsInRole("Admin") || User.IsInRole("ChefCuisine"))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Nouveau mouvement
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Produit</label>
+                <select name="produitId" class="form-select form-select-sm" asp-items="ViewBag.Produits">
+                    <option value="">Tous les produits</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Type</label>
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">Tous</option>
+                    <option value="Entrée" selected="@(ViewBag.FiltreType == "Entrée" ? "selected" : null)">Entrée</option>
+                    <option value="Sortie" selected="@(ViewBag.FiltreType == "Sortie" ? "selected" : null)">Sortie</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Motif</label>
+                <select name="motif" class="form-select form-select-sm">
+                    <option value="">Tous</option>
+                    <option value="Achat">Achat</option>
+                    <option value="Retour fournisseur">Retour fournisseur</option>
+                    <option value="Utilisation">Utilisation</option>
+                    <option value="Perte">Perte</option>
+                    <option value="Don">Don</option>
+                    <option value="Ajustement">Ajustement</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Du</label>
+                <input type="date" name="dateDebut" class="form-control form-control-sm" value="@ViewBag.FiltreDateDebut" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Au</label>
+                <input type="date" name="dateFin" class="form-control form-control-sm" value="@ViewBag.FiltreDateFin" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Produit</th>
+                            <th class="text-center">Type</th>
+                            <th class="text-center">Motif</th>
+                            <th class="text-end">Quantité</th>
+                            <th>Raison</th>
+                            <th>Commande</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in Model)
+                        {
+                            <tr>
+                                <td style="font-size:.82rem;">@m.DateMouvement.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <strong>@m.Produit?.Nom</strong>
+                                    <br><span class="text-muted" style="font-size:.75rem;">@m.Produit?.Categorie?.Nom</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (m.TypeMouvement == "Entrée")
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-arrow-down me-1"></i>Entrée</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-arrow-up me-1"></i>Sortie</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border">@(m.Motif ?? "—")</span>
+                                </td>
+                                <td class="text-end fw-bold">
+                                    @if (m.TypeMouvement == "Entrée")
+                                    {
+                                        <span class="text-success">+@m.Quantite</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger">-@m.Quantite</span>
+                                    }
+                                    <span class="text-muted" style="font-size:.75rem;"> @m.Produit?.Unite</span>
+                                </td>
+                                <td style="font-size:.82rem;max-width:200px;">@(m.Raison ?? "—")</td>
+                                <td>
+                                    @if (m.CommandeAchatId.HasValue)
+                                    {
+                                        <a asp-controller="Commandes" asp-action="Details" asp-route-id="@m.CommandeAchatId"
+                                           class="badge bg-primary text-decoration-none">#@m.CommandeAchatId</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-arrow-left-right"></i>
+                <p>Aucun mouvement trouvé</p>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,100 @@
+@model List<Gestion_Stock.Models.MouvementStock>
+@{
+    var produit = ViewBag.Produit as Gestion_Stock.Models.Produit;
+    ViewData["Title"] = $"Mouvements — {produit?.Nom}";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-arrow-left-right"></i> Mouvements — @produit?.Nom</h1>
+    <div class="d-flex gap-2">
+        <a asp-controller="Produits" asp-action="Details" asp-route-id="@produit?.Id" class="btn btn-outline-info">
+            <i class="bi bi-eye me-1"></i> Fiche produit
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Tous les mouvements</a>
+    </div>
+</div>
+
+@if (produit != null)
+{
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div style="font-size:2rem;font-weight:800;color:#2563eb;">@produit.StockActuel</div>
+                    <div class="text-muted small">Stock actuel (@produit.Unite)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div style="font-size:2rem;font-weight:800;color:#16a34a;">@Model.Where(m => m.TypeMouvement == "Entrée").Sum(m => m.Quantite)</div>
+                    <div class="text-muted small">Total entrées</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div style="font-size:2rem;font-weight:800;color:#dc2626;">@Model.Where(m => m.TypeMouvement == "Sortie").Sum(m => m.Quantite)</div>
+                    <div class="text-muted small">Total sorties</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div style="font-size:2rem;font-weight:800;color:#6366f1;">@Model.Count</div>
+                    <div class="text-muted small">Mouvements total</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr><th>Date</th><th class="text-center">Type</th><th class="text-center">Motif</th><th class="text-end">Quantité</th><th>Raison</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model)
+                    {
+                        <tr>
+                            <td style="font-size:.82rem;">@m.DateMouvement.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-center">
+                                @if (m.TypeMouvement == "Entrée")
+                                {
+                                    <span class="badge bg-success">Entrée</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Sortie</span>
+                                }
+                            </td>
+                            <td class="text-center"><span class="badge bg-light text-dark border">@(m.Motif ?? "—")</span></td>
+                            <td class="text-end fw-bold">
+                                @if (m.TypeMouvement == "Entrée")
+                                {
+                                    <span class="text-success">+@m.Quantite</span>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">-@m.Quantite</span>
+                                }
+                            </td>
+                            <td style="font-size:.82rem;">@(m.Raison ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state"><i class="bi bi-arrow-left-right"></i><p>Aucun mouvement pour ce produit</p></div>
+        }
+    </div>
+</div>

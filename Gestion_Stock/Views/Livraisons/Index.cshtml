@@ -1,0 +1,89 @@
+@model IEnumerable<Gestion_Stock.Models.Livraison>
+@{
+    ViewData["Title"] = "Livraisons";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-truck"></i> Livraisons</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> Nouvelle livraison
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Commercial</th>
+                            <th class="text-center">Statut</th>
+                            <th class="text-center">Commandes</th>
+                            <th>Notes/Avis</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.DateLivraison.ToString("dd/MM/yyyy")</td>
+                                <td>@(item.Commercial?.Nom ?? "—")</td>
+                                <td class="text-center">
+                                    @if (item.Statut == "Livré")
+                                    {
+                                        <span class="badge bg-success">@item.Statut</span>
+                                    }
+                                    else if (item.Statut == "En attente")
+                                    {
+                                        <span class="badge bg-warning">@item.Statut</span>
+                                    }
+                                    else if (item.Statut == "Retour")
+                                    {
+                                        <span class="badge bg-danger">@item.Statut</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info">@item.Statut</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge" style="background:#eff6ff;color:#2563eb;">@item.Commandes.Count</span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.NoteAvis))
+                                    {
+                                        <span style="font-size:.82rem;">@item.NoteAvis</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                                        <a asp-action="AddNote" asp-route-id="@item.Id" class="btn btn-sm btn-secondary" title="Ajouter note"><i class="bi bi-chat-left-text"></i></a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-truck"></i>
+                <p>Aucune livraison enregistrée</p>
+                <a asp-action="Create" class="btn btn-primary btn-sm mt-2">Ajouter une livraison</a>
+            </div>
+        }
+    </div>
+</div>

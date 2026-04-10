@@ -1,0 +1,106 @@
+@{
+    ViewData["Title"] = "Nouveau mouvement de stock";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-plus-circle"></i> Nouveau mouvement de stock</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Retour</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div class="form-section">
+                        <div class="form-section-title"><i class="bi bi-box-seam"></i> Produit & Quantité</div>
+                        <div class="mb-3">
+                            <label class="form-label">Produit</label>
+                            <select name="produitId" class="form-select" asp-items="ViewBag.Produits" required>
+                                <option value="">-- Sélectionner un produit --</option>
+                            </select>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Quantité</label>
+                                <input type="number" name="quantite" class="form-control" min="1" value="1" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type de mouvement</label>
+                                <select name="typeMouvement" class="form-select" id="typeMouvement" required>
+                                    <option value="Entrée">Entrée</option>
+                                    <option value="Sortie">Sortie</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title"><i class="bi bi-tag"></i> Motif & Détails</div>
+                        <div class="mb-3">
+                            <label class="form-label">Motif</label>
+                            <select name="motif" class="form-select" id="motifSelect" required>
+                                <option value="Achat">Achat</option>
+                                <option value="Retour fournisseur">Retour fournisseur</option>
+                                <option value="Utilisation">Utilisation</option>
+                                <option value="Perte">Perte</option>
+                                <option value="Don">Don</option>
+                                <option value="Ajustement">Ajustement</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Raison / Détails (optionnel)</label>
+                            <textarea name="raison" class="form-control" rows="2" placeholder="Ex: Livraison commande #12, Préparation menu du jour..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Employé responsable</label>
+                            <select name="employeId" class="form-select" asp-items="ViewBag.Employes">
+                                <option value="">-- Sélectionner --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Enregistrer</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header" style="background:#fffbeb;">
+                <span style="font-weight:700;color:#92400e;"><i class="bi bi-info-circle me-2"></i>Guide des motifs</span>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead><tr><th>Type</th><th>Motifs disponibles</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="badge bg-success">Entrée</span></td><td>Achat, Retour fournisseur, Ajustement</td></tr>
+                        <tr><td><span class="badge bg-danger">Sortie</span></td><td>Utilisation, Perte, Don, Ajustement</td></tr>
+                    </tbody>
+                </table>
+                <div class="alert alert-info mt-3 small">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    Le stock du produit sera automatiquement mis à jour et les alertes vérifiées.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Adapter les motifs selon le type de mouvement
+        document.getElementById('typeMouvement').addEventListener('change', function() {
+            const motifSelect = document.getElementById('motifSelect');
+            const type = this.value;
+            const entreeMotifs = ['Achat', 'Retour fournisseur', 'Ajustement'];
+            const sortieMotifs = ['Utilisation', 'Perte', 'Don', 'Ajustement'];
+            const motifs = type === 'Entrée' ? entreeMotifs : sortieMotifs;
+            motifSelect.innerHTML = motifs.map(m => `<option value="${m}">${m}</option>`).join('');
+        });
+    </script>
+}

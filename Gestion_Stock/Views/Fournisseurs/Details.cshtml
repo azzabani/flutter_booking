@@ -1,0 +1,67 @@
+@model Gestion_Stock.Models.Fournisseur
+@{
+    ViewData["Title"] = "Détails fournisseur";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-building"></i> @Model.Nom</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning"><i class="bi bi-pencil me-1"></i> Modifier</a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Retour</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header" style="background:#fff;"><span style="font-weight:700;"><i class="bi bi-info-circle text-primary me-2"></i>Coordonnées</span></div>
+            <div class="card-body">
+                <div class="info-grid" style="grid-template-columns:1fr;">
+                    <div class="info-item">
+                        <div class="info-label">Nom</div>
+                        <div class="info-value">@Model.Nom</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Email</div>
+                        <div class="info-value"><a href="mailto:@Model.Email">@Model.Email</a></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Téléphone</div>
+                        <div class="info-value">@(string.IsNullOrEmpty(Model.Telephone) ? "—" : Model.Telephone)</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Adresse</div>
+                        <div class="info-value">@(string.IsNullOrEmpty(Model.Adresse) ? "—" : Model.Adresse)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header" style="background:#fff;"><span style="font-weight:700;"><i class="bi bi-box text-success me-2"></i>Produits associés (@Model.FournisseurProduits.Count)</span></div>
+            <div class="card-body p-0">
+                @if (Model.FournisseurProduits.Any())
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>Produit</th><th class="text-end">Prix d'achat</th><th class="text-center">Délai</th></tr></thead>
+                        <tbody>
+                            @foreach (var fp in Model.FournisseurProduits)
+                            {
+                                <tr>
+                                    <td>@(fp.Produit?.Nom ?? "—")</td>
+                                    <td class="text-end"><span class="badge bg-success">@fp.PrixAchat.ToString("N2") DT</span></td>
+                                    <td class="text-center">@fp.DelaiLivraisonJours j</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state"><p>Aucun produit associé</p></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

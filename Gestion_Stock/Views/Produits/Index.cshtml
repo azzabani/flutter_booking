@@ -1,0 +1,98 @@
+@model IEnumerable<Gestion_Stock.Models.Produit>
+@{
+    ViewData["Title"] = "Produits";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-box-seam"></i> Produits</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> Nouveau produit
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Nom</th>
+                            <th>Catégorie</th>
+                            <th class="text-end">Prix unitaire</th>
+                            <th class="text-center">Stock</th>
+                            <th class="text-center">Statut</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            int pct = item.SeuilMax > 0 ? (int)Math.Min(100, (double)item.StockActuel / item.SeuilMax * 100) : 0;
+                            string barColor = item.StockActuel <= item.SeuilMin ? "#ef4444" : item.StockActuel >= item.SeuilMax ? "#f59e0b" : "#22c55e";
+                            <tr>
+                                <td><code style="font-size:.8rem;color:#6366f1;">@(item.Reference ?? "—")</code></td>
+                                <td><strong>@item.Nom</strong></td>
+                                <td>
+                                    <span class="badge" style="background:#eff6ff;color:#2563eb;font-weight:600;">
+                                        @item.Categorie?.Nom
+                                    </span>
+                                </td>
+                                <td class="text-end fw-semibold">@item.PrixUnitaire.ToString("N2") DT / @item.Unite</td>
+                                <td style="min-width:120px;">
+                                    <div class="text-center fw-bold" style="font-size:.9rem;">@item.StockActuel</div>
+                                    <div class="stock-bar">
+                                        <div class="stock-bar-fill" style="width:@pct%;background:@barColor;"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between" style="font-size:.68rem;color:#94a3b8;margin-top:2px;">
+                                        <span>@item.SeuilMin</span>
+                                        <span>@item.SeuilMax</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.StockActuel <= item.SeuilMin)
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-arrow-down me-1"></i>Rupture</span>
+                                    }
+                                    else if (item.StockActuel >= item.SeuilMax)
+                                    {
+                                        <span class="badge bg-warning"><i class="bi bi-arrow-up me-1"></i>Surstock</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-check me-1"></i>Normal</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info" title="Détails">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning" title="Modifier">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger" title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-box-seam"></i>
+                <p>Aucun produit enregistré</p>
+                <a asp-action="Create" class="btn btn-primary btn-sm mt-2">
+                    <i class="bi bi-plus-circle me-1"></i> Ajouter un produit
+                </a>
+            </div>
+        }
+    </div>
+</div>

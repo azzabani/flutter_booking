@@ -1,0 +1,97 @@
+@model Gestion_Stock.Models.Livraison
+@{
+    ViewData["Title"] = "Détails livraison";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-truck"></i> Livraison #@Model.Id</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="AddNote" asp-route-id="@Model.Id" class="btn btn-secondary"><i class="bi bi-chat-left-text me-1"></i> Ajouter note</a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning"><i class="bi bi-pencil me-1"></i> Modifier</a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Retour</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header" style="background:#fff;"><span style="font-weight:700;"><i class="bi bi-info-circle text-primary me-2"></i>Informations</span></div>
+            <div class="card-body">
+                <div class="info-grid" style="grid-template-columns:1fr;">
+                    <div class="info-item">
+                        <div class="info-label">Date de livraison</div>
+                        <div class="info-value">@Model.DateLivraison.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Statut</div>
+                        <div class="info-value">
+                            @if (Model.Statut == "Livré")
+                            {
+                                <span class="badge bg-success fs-6">@Model.Statut</span>
+                            }
+                            else if (Model.Statut == "En attente")
+                            {
+                                <span class="badge bg-warning fs-6">@Model.Statut</span>
+                            }
+                            else if (Model.Statut == "Retour")
+                            {
+                                <span class="badge bg-danger fs-6">@Model.Statut</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-info fs-6">@Model.Statut</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Commercial</div>
+                        <div class="info-value">@(Model.Commercial?.Nom ?? "—")</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Notes/Avis</div>
+                        <div class="info-value">@(string.IsNullOrEmpty(Model.NoteAvis) ? "—" : Model.NoteAvis)</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Note interne</div>
+                        <div class="info-value">@(string.IsNullOrEmpty(Model.Note) ? "—" : Model.Note)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header" style="background:#fff;">
+                <span style="font-weight:700;"><i class="bi bi-cart3 text-primary me-2"></i>Commandes associées (@Model.Commandes.Count)</span>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.Commandes.Any())
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>N°</th><th>Date</th><th>Employé</th><th class="text-end">Total</th><th>Statut</th></tr></thead>
+                        <tbody>
+                            @foreach (var cmd in Model.Commandes)
+                            {
+                                <tr>
+                                    <td><strong>#@cmd.Id</strong></td>
+                                    <td>@cmd.DateCommande.ToString("dd/MM/yyyy")</td>
+                                    <td>@(cmd.Employe?.NomComplet ?? "—")</td>
+                                    <td class="text-end">@cmd.TotalFacture.ToString("N2") DT</td>
+                                    <td>
+                                        @if (cmd.Statut == "Livré") { <span class="badge bg-success">@cmd.Statut</span> }
+                                        else if (cmd.Statut == "En attente") { <span class="badge bg-warning">@cmd.Statut</span> }
+                                        else { <span class="badge bg-secondary">@cmd.Statut</span> }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state"><p>Aucune commande associée</p></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

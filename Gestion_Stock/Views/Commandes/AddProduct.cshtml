@@ -1,0 +1,126 @@
+@model Gestion_Stock.Models.CommandeAchat
+@{
+    ViewData["Title"] = "Ajouter des produits";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-cart-plus"></i> Commande <span style="color:#6366f1;">#@Model.Id</span> — Ajouter des produits</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-check-circle me-1"></i> Terminer
+    </a>
+</div>
+
+<div class="row g-3">
+    <!-- Formulaire ajout produit -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header" style="background:#eff6ff;">
+                <span style="font-weight:700;color:#1d4ed8;"><i class="bi bi-plus-circle me-2"></i>Ajouter un produit</span>
+            </div>
+            <div class="card-body">
+                <form asp-action="AddProduct" method="post">
+                    <input type="hidden" name="commandeId" value="@Model.Id" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Produit</label>
+                        <select name="produitId" class="form-select" required>
+                            <option value="">-- Sélectionner --</option>
+                            @foreach (var item in ViewBag.Produits as SelectList ?? new SelectList(new List<object>()))
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Quantité</label>
+                        <input type="number" name="quantite" class="form-control" min="1" value="1" required />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle me-1"></i> Ajouter
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Résumé commande -->
+        <div class="card mt-3">
+            <div class="card-header" style="background:#f0fdf4;">
+                <span style="font-weight:700;color:#166534;"><i class="bi bi-receipt me-2"></i>Résumé</span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Sous-total</span>
+                    <strong>@Model.SousTotal.ToString("N2") DT</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Frais livraison</span>
+                    <strong>@Model.FraisLivraison.ToString("N2") DT</strong>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between">
+                    <span style="font-weight:700;">Total facture</span>
+                    <span style="font-size:1.2rem;font-weight:800;color:#2563eb;">@Model.TotalFacture.ToString("N2") DT</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des produits -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header" style="background:#fff;">
+                <span style="font-weight:700;"><i class="bi bi-list-ul text-primary me-2"></i>Produits dans la commande</span>
+                <span class="badge bg-primary ms-2">@Model.LignesCommande.Count</span>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.LignesCommande.Any())
+                {
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th class="text-end">Prix unitaire</th>
+                                <th class="text-end">Quantité</th>
+                                <th class="text-end">Sous-total</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ligne in Model.LignesCommande)
+                            {
+                                <tr>
+                                    <td><strong>@ligne.Produit?.Nom</strong></td>
+                                    <td class="text-end">@ligne.PrixUnitaire.ToString("N2") DT</td>
+                                    <td class="text-end">
+                                        <span class="badge bg-primary">@ligne.Quantite</span>
+                                    </td>
+                                    <td class="text-end fw-bold">@((ligne.PrixUnitaire * ligne.Quantite).ToString("N2")) DT</td>
+                                    <td class="text-center">
+                                        <form asp-action="RemoveProduct" method="post" class="d-inline">
+                                            <input type="hidden" name="ligneId" value="@ligne.Id" />
+                                            <input type="hidden" name="commandeId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-sm btn-danger"
+                                                    onclick="return confirm('Retirer ce produit?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-cart"></i>
+                        <p>Aucun produit ajouté</p>
+                        <p style="font-size:.8rem;">Utilisez le formulaire à gauche pour ajouter des produits</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

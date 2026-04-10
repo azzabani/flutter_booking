@@ -1,0 +1,133 @@
+@model Gestion_Stock.Models.CommandeAchat
+@{
+    ViewData["Title"] = "Détails commande";
+}
+
+<div class="page-header">
+    <h1><i class="bi bi-cart3"></i> Commande <span style="color:#6366f1;">#@Model.Id</span></h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+            <i class="bi bi-pencil me-1"></i> Modifier
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header" style="background:#fff;">
+                <span style="font-weight:700;"><i class="bi bi-info-circle text-primary me-2"></i>Informations</span>
+            </div>
+            <div class="card-body">
+                <div class="info-grid" style="grid-template-columns:1fr;">
+                    <div class="info-item">
+                        <div class="info-label">Date de commande</div>
+                        <div class="info-value">@Model.DateCommande.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Statut</div>
+                        <div class="info-value">
+                            @switch (Model.Statut)
+                            {
+                                case "Livré": <span class="badge bg-success fs-6">@Model.Statut</span> break;
+                                case "En attente": <span class="badge bg-warning fs-6">@Model.Statut</span> break;
+                                case "Retour": <span class="badge bg-danger fs-6">@Model.Statut</span> break;
+                                default: <span class="badge bg-info fs-6">@Model.Statut</span> break;
+                            }
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Employé</div>
+                        <div class="info-value">@(Model.Employe?.NomComplet ?? "—")</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Livraison</div>
+                        <div class="info-value">@(Model.Livraison?.Statut ?? "—")</div>
+                    </div>
+                    @if (Model.Livraison?.Commercial != null)
+                    {
+                        <div class="info-item">
+                            <div class="info-label">Commercial</div>
+                            <div class="info-value">@Model.Livraison.Commercial.Nom</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Totaux -->
+        <div class="card mt-3">
+            <div class="card-header" style="background:#f0fdf4;">
+                <span style="font-weight:700;color:#166534;"><i class="bi bi-receipt me-2"></i>Récapitulatif financier</span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Sous-total HT</span>
+                    <strong>@Model.SousTotal.ToString("N2") DT</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">TVA (@Model.TauxTVA%)</span>
+                    <strong>@Model.MontantTVA.ToString("N2") DT</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Total TTC</span>
+                    <strong>@Model.TotalTTC.ToString("N2") DT</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Frais de livraison</span>
+                    <strong>@Model.FraisLivraison.ToString("N2") DT</strong>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between">
+                    <span style="font-weight:700;font-size:1rem;">Total facture</span>
+                    <span style="font-size:1.3rem;font-weight:800;color:#2563eb;">@Model.TotalFacture.ToString("N2") DT</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lignes de commande -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header" style="background:#fff;">
+                <span style="font-weight:700;">
+                    <i class="bi bi-list-ul text-primary me-2"></i>Lignes de commande
+                    <span class="badge bg-primary ms-1">@Model.LignesCommande.Count</span>
+                </span>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.LignesCommande.Any())
+                {
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th class="text-end">Prix unitaire</th>
+                                <th class="text-end">Quantité</th>
+                                <th class="text-end">Total ligne</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ligne in Model.LignesCommande)
+                            {
+                                <tr>
+                                    <td><strong>@ligne.Produit?.Nom</strong></td>
+                                    <td class="text-end">@ligne.PrixUnitaire.ToString("N2") DT</td>
+                                    <td class="text-end"><span class="badge bg-primary">@ligne.Quantite</span></td>
+                                    <td class="text-end fw-bold">@((ligne.PrixUnitaire * ligne.Quantite).ToString("N2")) DT</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state"><p>Aucune ligne de commande</p></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
