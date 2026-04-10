@@ -3,7 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace Gestion_Stock.Models
 {
     /// <summary>
-    /// Représente un fournisseur
+    /// Représente un fournisseur dans le système de gestion de stock
+    /// Cette classe contient toutes les informations nécessaires pour gérer les fournisseurs
     /// </summary>
     public class Fournisseur
     {
