@@ -8,6 +8,9 @@ namespace Gestion_Stock.Models
     /// </summary>
     public class Produit
     {
+        /// <summary>
+        /// Identifiant unique du produit
+        /// </summary>
         [Key]
         public int Id { get; set; }
 
@@ -20,6 +23,9 @@ namespace Gestion_Stock.Models
         [Display(Name = "Référence")]
         public string? Reference { get; set; }
 
+        /// <summary>
+        /// Prix unitaire du produit en euros
+        /// </summary>
         [Required(ErrorMessage = "Le prix unitaire est requis")]
         [Column(TypeName = "decimal(18,2)")]
         [Range(0, double.MaxValue, ErrorMessage = "Le prix doit être positif")]
