@@ -3,10 +3,14 @@ using System.ComponentModel.DataAnnotations;
 namespace Gestion_Stock.Models
 {
     /// <summary>
-    /// Représente une catégorie de produits
+    /// Représente une catégorie de produits dans le système de gestion de stock
+    /// Permet de classifier et organiser les produits par type
     /// </summary>
     public class Categorie
     {
+        /// <summary>
+        /// Identifiant unique de la catégorie
+        /// </summary>
         [Key]
         public int Id { get; set; }
 
