@@ -8,6 +8,9 @@ namespace Gestion_Stock.Models
     /// </summary>
     public class Employe
     {
+        /// <summary>
+        /// Identifiant unique de l'employé
+        /// </summary>
         [Key]
         public int Id { get; set; }
 
@@ -22,6 +25,9 @@ namespace Gestion_Stock.Models
         [Display(Name = "Email")]
         public string Email { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Rôle de l'employé dans l'organisation (Admin, ChefCuisine, Serveur)
+        /// </summary>
         [Required(ErrorMessage = "Le rôle est requis")]
         [StringLength(50)]
         [Display(Name = "Rôle")]
