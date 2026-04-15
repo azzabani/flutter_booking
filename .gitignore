@@ -43,3 +43,34 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Firebase configuration files (keep local copies)
+# Uncomment if you want to ignore Firebase config
+# /android/app/google-services.json
+# /ios/Runner/GoogleService-Info.plist
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE specific files
+.vscode/settings.json
+.vscode/launch.json
+
+# Coverage reports
+lcov.info
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Platform specific
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+
+# Temporary files
+*.tmp
+*.temp
