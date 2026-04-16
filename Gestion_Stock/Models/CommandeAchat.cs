@@ -8,6 +8,9 @@ namespace Gestion_Stock.Models
     /// </summary>
     public class CommandeAchat
     {
+        /// <summary>
+        /// Identifiant unique de la commande d'achat
+        /// </summary>
         [Key]
         public int Id { get; set; }
 
@@ -41,6 +44,9 @@ namespace Gestion_Stock.Models
         [Display(Name = "Total facture")]
         public decimal TotalFacture { get; set; }
 
+        /// <summary>
+        /// Statut actuel de la commande (En attente, Confirmée, Partielle, Livrée, Retour, Annulée)
+        /// </summary>
         [Required(ErrorMessage = "Le statut est requis")]
         [StringLength(50)]
         [Display(Name = "Statut")]
