@@ -8,6 +8,9 @@ namespace Gestion_Stock.Models
     /// </summary>
     public class MouvementStock
     {
+        /// <summary>
+        /// Identifiant unique du mouvement de stock
+        /// </summary>
         [Key]
         public int Id { get; set; }
 
@@ -18,8 +21,11 @@ namespace Gestion_Stock.Models
 
         [Required]
         [Display(Name = "Quantité")]
-        public int Quantite { get; set; }8
+        public int Quantite { get; set; }
 
+        /// <summary>
+        /// Type de mouvement : Entrée (Achat, Retour fournisseur) ou Sortie (Utilisation, Perte, Don)
+        /// </summary>
         [Required]
         [StringLength(50)]
         [Display(Name = "Type")]
